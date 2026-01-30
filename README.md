@@ -2,7 +2,73 @@ This file provides guidance when working with code in this repository. The READM
 
 # Project Notes
 
-<!-- Documentation for this specific project goes here. This will include both an articulation of what this project aims to accomplish as well as technical details about how it works. This means explaining the purpose of the project as a whole along with an overview of the design choices. -->
+This is a **Plane Tracker** - a standalone web application that displays real-time aircraft information near your location using the [OpenSky Network API](https://opensky-network.org).
+
+## Features
+
+- **Real-time Aircraft Tracking**: Shows planes currently flying within ~100km of your location
+- **Geolocation-based Search**: Automatically detects your location (defaults to central US if unavailable)
+- **Rate Limit Handling**: Smart exponential backoff when encountering API rate limits (429 errors)
+- **Auto-refresh**: Automatically updates data every 60 seconds (adjusts during rate limit cooldowns)
+- **Manual Refresh**: Button to force refresh when rate limit allows
+- **Detailed Aircraft Info**: Shows callsign, ICAO24 code, country, altitude, speed, heading, vertical rate, and position
+- **Responsive Design**: Beautiful gradient UI with cards that work on mobile and desktop
+- **Error Handling**: Clear error messages for rate limits, API errors, and empty results
+
+## Architecture
+
+This is a **single-file standalone application** (no React, no build process) that runs directly in the browser:
+
+- `index.html` - Complete application with embedded CSS and JavaScript
+- No backend server required for the core functionality
+- No external dependencies (all styling and logic inline)
+- Direct API calls to OpenSky Network from the browser
+
+## Rate Limiting
+
+The OpenSky Network API has rate limits. This application handles them gracefully:
+
+1. **Default Refresh**: Every 60 seconds
+2. **On Rate Limit (429)**: Exponential backoff starting at 30s, doubling up to max 5 minutes
+3. **Countdown Timer**: Shows time until next retry during cooldown
+4. **Manual Refresh**: Disabled during rate limit cooldown period
+
+```javascript
+// Backoff progression:
+// 1st hit: 30s
+// 2nd hit: 60s  
+// 3rd hit: 120s
+// 4th hit: 240s
+// 5th+ hit: 300s (max)
+```
+
+## API Usage
+
+The application queries the OpenSky Network API with a bounding box around your location:
+
+```
+GET https://opensky-network.org/api/states/all?lamin={lat-0.5}&lamax={lat+0.5}&lomin={lon-0.5}&lomax={lon+0.5}&extended=1
+```
+
+Parameters:
+- `lamin/lamax`: Latitude bounds (~100km box)
+- `lomin/lomax`: Longitude bounds (~100km box)  
+- `extended=1`: Returns additional data (velocity, vertical rate, etc.)
+
+## Browser Requirements
+
+- Modern browser with ES6 support
+- Geolocation API support (optional, falls back to default location)
+- JavaScript enabled
+- No authentication required for OpenSky Network public API
+
+## Deployment
+
+The site is served via the Zo Site framework (`server.ts` + Hono) but the tracker itself is static HTML/CSS/JS that could be deployed anywhere:
+
+- **Zo Development**: Served via Vite middleware mode
+- **Zo Production**: Built to `dist/` and served as static files
+- **Standalone**: The `index.html` file works independently
 
 ---
 
@@ -12,8 +78,6 @@ This is a **Zo Site** - a web application running on a user's Zo computer that c
 - **Backend**: Bun + Hono server with API routes
 - **Frontend**: React + Vite with client-side routing, shadcn/ui components, and Tailwind CSS 4
 - **Single Process**: Vite runs in middleware mode (no separate dev server)
-
-## Architecture
 
 ### Template Variants
 

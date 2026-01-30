@@ -75,11 +75,11 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       color: #0ea5e9;
     }
-    button:hover {
+    button:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
-    button:active {
+    button:active:not(:disabled) {
       transform: translateY(0);
     }
     button:disabled {
@@ -111,6 +111,34 @@
     .status-desc {
       font-size: 14px;
       color: #64748b;
+    }
+    .rate-limit-card {
+      background: #fef3c7;
+      border: 2px solid #fcd34d;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(251, 191, 36, 0.1);
+    }
+    .rate-limit-title {
+      color: #b45309;
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 18px;
+    }
+    .rate-limit-msg {
+      color: #92400e;
+      font-size: 14px;
+    }
+    .retry-timer {
+      display: inline-block;
+      background: #fcd34d;
+      color: #92400e;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 13px;
+      margin-top: 8px;
     }
     .error-card {
       background: #fef2f2;
@@ -254,7 +282,7 @@
           <div class="subtitle">Real-time aircraft near your location</div>
         </div>
       </div>
-      <button onclick="fetchPlanes()" id="refreshBtn">
+      <button onclick="manualRefresh()" id="refreshBtn">
         <span id="refreshIcon">↻</span>
         <span id="refreshText">Refresh</span>
       </button>
@@ -263,6 +291,12 @@
     <div class="status-card">
       <div class="status-title" id="statusTitle">Loading...</div>
       <div class="status-desc" id="statusDesc"></div>
+    </div>
+
+    <div id="rateLimitCard" class="rate-limit-card" style="display: none;">
+      <div class="rate-limit-title">⏳ Rate Limited</div>
+      <div class="rate-limit-msg" id="rateLimitMsg">Too many requests to the OpenSky API. Please wait before refreshing.</div>
+      <div class="retry-timer" id="retryTimer"></div>
     </div>
 
     <div id="errorCard" class="error-card" style="display: none;">
@@ -286,6 +320,11 @@
   <script>
     let userLocation = { lat: 39.8283, lon: -98.5795 }; // Default: central US
     let refreshInterval = null;
+    let rateLimitEndTime = null;
+    let rateLimitTimer = null;
+    let backoffTime = 0;
+    const BASE_REFRESH_INTERVAL = 60000; // 60 seconds
+    let currentRefreshInterval = BASE_REFRESH_INTERVAL;
 
     // Get user location
     if (navigator.geolocation) {
@@ -303,12 +342,27 @@
       fetchPlanes();
     }
 
-    async function fetchPlanes() {
+    function manualRefresh() {
+      if (rateLimitEndTime && Date.now() < rateLimitEndTime) {
+        // Can't refresh yet
+        return;
+      }
+      fetchPlanes(true);
+    }
+
+    async function fetchPlanes(isManual = false) {
+      // Check if we're in rate limit cooldown
+      if (rateLimitEndTime && Date.now() < rateLimitEndTime) {
+        return;
+      }
+
       const btn = document.getElementById('refreshBtn');
       const icon = document.getElementById('refreshIcon');
       const text = document.getElementById('refreshText');
       const statusTitle = document.getElementById('statusTitle');
       const statusDesc = document.getElementById('statusDesc');
+      const rateLimitCard = document.getElementById('rateLimitCard');
+      const rateLimitMsg = document.getElementById('rateLimitMsg');
       const errorCard = document.getElementById('errorCard');
       const errorMsg = document.getElementById('errorMsg');
       const emptyState = document.getElementById('emptyState');
@@ -318,8 +372,8 @@
       icon.classList.add('loading');
       text.textContent = 'Loading...';
       errorCard.style.display = 'none';
+      rateLimitCard.style.display = 'none';
       emptyState.style.display = 'none';
-      grid.innerHTML = '';
 
       const boxSize = 1.0;
       const lamin = userLocation.lat - boxSize / 2;
@@ -332,12 +386,22 @@
           `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}&extended=1`
         );
 
+        // Handle rate limiting (429)
+        if (response.status === 429) {
+          handleRateLimit();
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
         }
 
         const data = await response.json();
         const lastUpdate = new Date();
+
+        // Reset backoff on success
+        backoffTime = 0;
+        currentRefreshInterval = BASE_REFRESH_INTERVAL;
 
         if (data.states && data.states.length > 0) {
           const planes = data.states
@@ -386,7 +450,64 @@
         if (refreshInterval) {
           clearInterval(refreshInterval);
         }
-        refreshInterval = setInterval(fetchPlanes, 30000);
+        refreshInterval = setInterval(() => fetchPlanes(false), currentRefreshInterval);
+      }
+    }
+
+    function handleRateLimit() {
+      const btn = document.getElementById('refreshBtn');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusDesc = document.getElementById('statusDesc');
+      const rateLimitCard = document.getElementById('rateLimitCard');
+      const rateLimitMsg = document.getElementById('rateLimitMsg');
+      const retryTimer = document.getElementById('retryTimer');
+      const errorCard = document.getElementById('errorCard');
+      const grid = document.getElementById('planeGrid');
+
+      // Calculate backoff time (exponential: 30s, 60s, 120s, 240s, max 300s)
+      backoffTime = Math.min(30 * Math.pow(2, backoffTime > 0 ? Math.log2(backoffTime / 30) + 1 : 0), 300);
+      
+      // Set rate limit end time
+      rateLimitEndTime = Date.now() + (backoffTime * 1000);
+      currentRefreshInterval = backoffTime * 1000;
+
+      statusTitle.textContent = 'Rate Limited';
+      statusDesc.textContent = `API rate limit reached. Auto-refresh in ${Math.ceil(backoffTime)} seconds.`;
+      
+      rateLimitCard.style.display = 'block';
+      rateLimitMsg.textContent = `Too many requests to the OpenSky API. Please wait before refreshing.`;
+      
+      errorCard.style.display = 'none';
+      btn.disabled = true;
+
+      // Update countdown timer
+      updateRetryTimer();
+      rateLimitTimer = setInterval(updateRetryTimer, 1000);
+
+      // Clear any existing interval
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+
+      // Schedule next fetch after backoff
+      refreshInterval = setTimeout(() => {
+        clearInterval(rateLimitTimer);
+        rateLimitCard.style.display = 'none';
+        btn.disabled = false;
+        fetchPlanes(false);
+      }, backoffTime * 1000);
+    }
+
+    function updateRetryTimer() {
+      const retryTimer = document.getElementById('retryTimer');
+      if (!rateLimitEndTime) return;
+
+      const remaining = Math.max(0, Math.ceil((rateLimitEndTime - Date.now()) / 1000));
+      
+      if (remaining > 60) {
+        retryTimer.textContent = `Retry in ${Math.ceil(remaining / 60)} min ${remaining % 60} sec`;
+      } else {
+        retryTimer.textContent = `Retry in ${remaining} sec`;
       }
     }
 

@@ -1,0 +1,19 @@
+{
+  "name": "plane-tracker",
+  "local_port": 53799,
+  "entrypoint": "bun run dev",
+  "env": {
+    "VITE_ZO_SITE_DEMO_VARIANT": "blank"
+  },
+  "publish": {
+    "label": "plane-tracker",
+    "type": "http",
+    "entrypoint": "bun run prod",
+    "published_port": 54980,
+    "env": {
+      "NODE_ENV": "production",
+      "ZO_CLIENT_IDENTITY_TOKEN": "none",
+      "VITE_ZO_SITE_DEMO_VARIANT": "blank"
+    }
+  }
+}

@@ -1,15 +1,447 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <!-- AI agents: read README.md for navigation and contribution guidance. -->
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Zo Site</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>Plane Tracker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #1e293b;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon {
+      width: 56px;
+      height: 56px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0ea5e9;
+      font-weight: bold;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .subtitle {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-top: 4px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    button {
+      padding: 12px 24px;
+      background: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      color: #0ea5e9;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .loading {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .status-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    .status-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0c4a6e;
+      margin-bottom: 4px;
+    }
+    .status-desc {
+      font-size: 14px;
+      color: #64748b;
+    }
+    .error-card {
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+    }
+    .error-title {
+      color: #dc2626;
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 18px;
+    }
+    .error-msg {
+      color: #991b1b;
+      font-size: 14px;
+    }
+    .empty-state {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 80px 20px;
+      text-align: center;
+      margin-bottom: 24px;
+      color: #64748b;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+    .plane-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .plane-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    }
+    .plane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 16px;
+    }
+    .plane-callsign {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0c4a6e;
+      letter-spacing: 0.5px;
+    }
+    .plane-icao {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .plane-badge {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+    }
+    .plane-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      font-size: 14px;
+    }
+    .stat-label {
+      color: #64748b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+    .stat-value {
+      font-weight: 600;
+      color: #0c4a6e;
+      font-size: 15px;
+    }
+    .climb { 
+      color: #16a34a; 
+      font-weight: 700;
+    }
+    .descend { 
+      color: #ea580c; 
+      font-weight: 700;
+    }
+    .plane-position {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 2px solid #e2e8f0;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      color: #475569;
+      background: #f8fafc;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    footer a {
+      color: white;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <div class="icon">✈️</div>
+        <div>
+          <h1>Plane Tracker</h1>
+          <div class="subtitle">Real-time aircraft near your location</div>
+        </div>
+      </div>
+      <button onclick="fetchPlanes()" id="refreshBtn">
+        <span id="refreshIcon">↻</span>
+        <span id="refreshText">Refresh</span>
+      </button>
+    </header>
+
+    <div class="status-card">
+      <div class="status-title" id="statusTitle">Loading...</div>
+      <div class="status-desc" id="statusDesc"></div>
+    </div>
+
+    <div id="errorCard" class="error-card" style="display: none;">
+      <div class="error-title">Unable to load plane data</div>
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-icon">✈️</div>
+      <p style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">No planes detected nearby</p>
+      <p style="font-size: 15px;">Planes will appear here when they enter your area</p>
+    </div>
+
+    <div class="grid" id="planeGrid"></div>
+
+    <footer>
+      <p>Data provided by <a href="https://opensky-network.org" target="_blank" rel="noopener noreferrer">OpenSky Network</a> • <a href="https://opensky-network.org" target="_blank" rel="noopener noreferrer">Learn more</a></p>
+    </footer>
+  </div>
+
+  <script>
+    let userLocation = { lat: 39.8283, lon: -98.5795 }; // Default: central US
+    let refreshInterval = null;
+
+    // Get user location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          fetchPlanes();
+        },
+        (err) => {
+          console.error("Geolocation error:", err);
+          fetchPlanes();
+        }
+      );
+    } else {
+      fetchPlanes();
+    }
+
+    async function fetchPlanes() {
+      const btn = document.getElementById('refreshBtn');
+      const icon = document.getElementById('refreshIcon');
+      const text = document.getElementById('refreshText');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusDesc = document.getElementById('statusDesc');
+      const errorCard = document.getElementById('errorCard');
+      const errorMsg = document.getElementById('errorMsg');
+      const emptyState = document.getElementById('emptyState');
+      const grid = document.getElementById('planeGrid');
+
+      btn.disabled = true;
+      icon.classList.add('loading');
+      text.textContent = 'Loading...';
+      errorCard.style.display = 'none';
+      emptyState.style.display = 'none';
+      grid.innerHTML = '';
+
+      const boxSize = 1.0;
+      const lamin = userLocation.lat - boxSize / 2;
+      const lamax = userLocation.lat + boxSize / 2;
+      const lomin = userLocation.lon - boxSize / 2;
+      const lomax = userLocation.lon + boxSize / 2;
+
+      try {
+        const response = await fetch(
+          `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}&extended=1`
+        );
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const lastUpdate = new Date();
+
+        if (data.states && data.states.length > 0) {
+          const planes = data.states
+            .filter(state => state[5] !== null && state[6] !== null)
+            .map(state => ({
+              icao24: state[0],
+              callsign: state[1],
+              origin_country: state[2],
+              lat: state[6],
+              lon: state[5],
+              alt: state[7],
+              vel: state[9],
+              track: state[10],
+              vRate: state[11],
+              onGround: state[8]
+            }));
+
+          statusTitle.textContent = `Found ${planes.length} aircraft`;
+          statusDesc.textContent = `Last updated: ${lastUpdate.toLocaleTimeString()} • Location: ${userLocation.lat.toFixed(4)}°, ${userLocation.lon.toFixed(4)}°`;
+
+          if (planes.length === 0) {
+            emptyState.style.display = 'block';
+          } else {
+            planes.forEach(plane => {
+              const card = createPlaneCard(plane);
+              grid.appendChild(card);
+            });
+          }
+        } else {
+          statusTitle.textContent = 'Scanning airspace...';
+          statusDesc.textContent = `Last updated: ${lastUpdate.toLocaleTimeString()} • Location: ${userLocation.lat.toFixed(4)}°, ${userLocation.lon.toFixed(4)}°`;
+          emptyState.style.display = 'block';
+        }
+      } catch (err) {
+        console.error(err);
+        statusTitle.textContent = 'Error';
+        statusDesc.textContent = 'Unable to fetch plane data';
+        errorCard.style.display = 'block';
+        errorMsg.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        icon.classList.remove('loading');
+        text.textContent = 'Refresh';
+        
+        // Reset and restart the interval
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+        refreshInterval = setInterval(fetchPlanes, 30000);
+      }
+    }
+
+    function createPlaneCard(plane) {
+      const card = document.createElement('div');
+      card.className = 'plane-card';
+
+      const alt = plane.alt ? `${Math.round(plane.alt * 3.28084).toLocaleString()} ft` : 'N/A';
+      const speed = plane.vel ? `${Math.round(plane.vel * 1.94384)} kts` : 'N/A';
+      const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      const heading = plane.track ? `${directions[Math.round(plane.track / 45) % 8]} (${Math.round(plane.track)}°)` : '—';
+      
+      let vStatus = 'LEVEL';
+      let vClass = '';
+      if (plane.vRate && Math.abs(plane.vRate) >= 0.5) {
+        vStatus = plane.vRate > 0 ? 'CLIMB' : 'DESCEND';
+        vClass = plane.vRate > 0 ? 'climb' : 'descend';
+      }
+
+      card.innerHTML = `
+        <div class="plane-header">
+          <div>
+            <div class="plane-callsign">${plane.callsign || 'Unknown'}</div>
+            <div class="plane-icao">${plane.icao24}</div>
+          </div>
+          <span class="plane-badge">${plane.origin_country}</span>
+        </div>
+        <div class="plane-stats">
+          <div>
+            <div class="stat-label">Altitude</div>
+            <div class="stat-value">${alt}</div>
+          </div>
+          <div>
+            <div class="stat-label">Speed</div>
+            <div class="stat-value">${speed}</div>
+          </div>
+          <div>
+            <div class="stat-label">Heading</div>
+            <div class="stat-value">${heading}</div>
+          </div>
+          <div>
+            <div class="stat-label">Vertical</div>
+            <div class="stat-value ${vClass}">${vStatus}</div>
+          </div>
+        </div>
+        ${plane.lat && plane.lon ? `
+          <div class="plane-position">
+            Position: ${plane.lat.toFixed(4)}°, ${plane.lon.toFixed(4)}°
+          </div>
+        ` : ''}
+      `;
+
+      return card;
+    }
+  </script>
+</body>
 </html>
 

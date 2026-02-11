@@ -297,6 +297,45 @@
       color: #64748b;
       display: inline-block;
     }
+    .squawk-tip {
+      position: relative;
+      cursor: help;
+    }
+    .squawk-tip .squawk-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0c4a6e;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: 1.4;
+      padding: 8px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.15s, visibility 0.15s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .squawk-tip .squawk-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #0c4a6e;
+    }
+    .squawk-tip:hover .squawk-tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
     .squawk-emergency {
       background: #fef2f2;
       color: #dc2626;
@@ -913,6 +952,37 @@
       }
     }
 
+    function getSquawkMeaning(code) {
+      if (!code) return '';
+      const meanings = {
+        '0000': 'Code not assigned',
+        '0033': 'Parachute jumping activity',
+        '1200': 'VFR — Visual flight rules',
+        '1201': 'VFR — Glider operations',
+        '1202': 'VFR — Helicopter operations',
+        '1277': 'VFR — Search and rescue',
+        '2000': 'Entering controlled airspace (no code assigned)',
+        '4000': 'Military — Special use',
+        '4400': 'Military — Alert / Scramble',
+        '5000': 'Military — Non-formation flight',
+        '5100': 'Military — Formation flight lead',
+        '7400': 'UAV — Unmanned aircraft lost link',
+        '7500': 'HIJACK — Aircraft is being hijacked',
+        '7600': 'RADIO FAILURE — Lost communications',
+        '7700': 'EMERGENCY — General emergency declared',
+        '7777': 'Military interceptor — Active engagement',
+      };
+      if (meanings[code]) return meanings[code];
+      const n = parseInt(code, 8);
+      if (code >= '0100' && code <= '0677') return 'Discrete code — Assigned by ATC';
+      if (code >= '1000' && code <= '1277') return 'VFR — Visual flight rules range';
+      if (code >= '2001' && code <= '2077') return 'Discrete code — Assigned by ATC';
+      if (code >= '4000' && code <= '4477') return 'Military / special use code';
+      if (code >= '5000' && code <= '5377') return 'Military / NORAD code';
+      if (code >= '6100' && code <= '6177') return 'TRSA — Terminal radar service area';
+      return 'Discrete code — Assigned by ATC';
+    }
+
     function createPlaneCard(plane) {
       const card = document.createElement('div');
       card.className = 'plane-card';
@@ -935,12 +1005,13 @@
       }
 
       const SQUAWK_LABELS = { '7500': 'HIJACK', '7600': 'RADIO FAIL', '7700': 'EMERGENCY' };
+      const squawkMeaning = getSquawkMeaning(plane.squawk);
       const squawkDisplay = plane.squawk ? (() => {
         const special = SQUAWK_LABELS[plane.squawk];
         const label = special ? `${plane.squawk} — ${special}` : plane.squawk;
         const cls = (plane.squawk === '7500' || plane.squawk === '7700') ? 'squawk-emergency'
                   : plane.squawk === '7600' ? 'squawk-radio' : '';
-        return `<span class="squawk-badge ${cls}">${escapeHtml(label)}</span>`;
+        return `<span class="squawk-tip"><span class="squawk-badge ${cls}">${escapeHtml(label)}</span><span class="squawk-tooltip">${escapeHtml(squawkMeaning)}</span></span>`;
       })() : '';
 
       const groundStatus = plane.onGround
@@ -990,7 +1061,7 @@
             </div>
             <div>
               <div class="stat-label">Squawk</div>
-              <div class="stat-value" style="font-family:'SF Mono','Monaco','Cascadia Code',monospace;">${plane.squawk ? escapeHtml(plane.squawk) : '—'}</div>
+              <div class="stat-value" style="font-family:'SF Mono','Monaco','Cascadia Code',monospace;">${plane.squawk ? `<span class="squawk-tip">${escapeHtml(plane.squawk)}<span class="squawk-tooltip">${escapeHtml(squawkMeaning)}</span></span>` : '—'}</div>
             </div>
             <div>
               <div class="stat-label">Altitude (baro)</div>

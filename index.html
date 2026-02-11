@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>Plane Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     * {
       margin: 0;
@@ -204,6 +205,21 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: 20px;
+    }
+    .map-container {
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      height: 460px;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    .plane-marker-icon {
+      background: none !important;
+      border: none !important;
     }
     .plane-card {
       background: rgba(255, 255, 255, 0.95);
@@ -407,6 +423,10 @@
       <div class="status-desc" id="statusDesc"></div>
     </div>
 
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+
     <div id="rateLimitCard" class="rate-limit-card" style="display: none;">
       <div class="rate-limit-title">⏳ Rate Limited</div>
       <div class="rate-limit-msg" id="rateLimitMsg">Too many requests to the OpenSky API. Please wait before refreshing.</div>
@@ -431,6 +451,7 @@
     </footer>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     let userLocation = { lat: 39.8283, lon: -98.5795 }; // Default: central US
     let cityName = null;
@@ -534,6 +555,88 @@
       }
     }
 
+    // ── Map ──────────────────────────────────────────────────────────────────
+    let map = null;
+    let userMarker = null;
+    const planeMarkers = new Map(); // icao24 -> L.marker
+
+    function createPlaneIcon(heading) {
+      const deg = heading || 0;
+      return L.divIcon({
+        html: `<div style="transform:rotate(${deg}deg);font-size:20px;line-height:1;color:#0284c7;text-shadow:0 1px 4px rgba(0,0,0,0.35);">✈</div>`,
+        className: 'plane-marker-icon',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -14],
+      });
+    }
+
+    function initMap() {
+      if (map) return;
+      map = L.map('map', { zoomControl: true }).setView([userLocation.lat, userLocation.lon], 9);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(map);
+      updateUserMarker();
+    }
+
+    function updateUserMarker() {
+      if (!map) return;
+      const latlng = [userLocation.lat, userLocation.lon];
+      const label = cityName ? `📍 ${cityName}` : '📍 Your location';
+      if (userMarker) {
+        userMarker.setLatLng(latlng).setPopupContent(label);
+      } else {
+        userMarker = L.circleMarker(latlng, {
+          radius: 9,
+          color: '#fff',
+          weight: 2,
+          fillColor: '#0ea5e9',
+          fillOpacity: 0.9,
+        }).addTo(map).bindPopup(label);
+      }
+    }
+
+    function updateMapMarkers(planes) {
+      if (!map) return;
+
+      // Remove markers for planes no longer visible
+      const current = new Set(planes.map(p => p.icao24));
+      for (const [icao24, marker] of planeMarkers) {
+        if (!current.has(icao24)) {
+          marker.remove();
+          planeMarkers.delete(icao24);
+        }
+      }
+
+      planes.forEach(plane => {
+        if (!plane.lat || !plane.lon) return;
+
+        const alt   = plane.alt ? Math.round(plane.alt * 3.28084).toLocaleString() + ' ft' : 'N/A';
+        const speed = plane.vel ? Math.round(plane.vel * 1.94384) + ' kts' : 'N/A';
+        const label = (plane.callsign || '').trim() || plane.icao24;
+        const popup = `<b>${label}</b><br>${plane.origin_country}<br>Alt: ${alt} · ${speed}`;
+
+        if (planeMarkers.has(plane.icao24)) {
+          const m = planeMarkers.get(plane.icao24);
+          m.setLatLng([plane.lat, plane.lon])
+           .setIcon(createPlaneIcon(plane.track))
+           .setPopupContent(popup);
+        } else {
+          const m = L.marker([plane.lat, plane.lon], { icon: createPlaneIcon(plane.track) })
+            .addTo(map)
+            .bindPopup(popup);
+          // Clicking a map marker scrolls to the matching card
+          m.on('click', () => {
+            const card = document.getElementById(`card-${plane.icao24}`);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+          planeMarkers.set(plane.icao24, m);
+        }
+      });
+    }
+
     async function geocodeLocation(query) {
       try {
         const response = await fetch(
@@ -576,6 +679,10 @@
         userLocation = { lat: result.lat, lon: result.lon };
         cityName = result.name;
         input.value = '';
+        if (map) {
+          map.setView([userLocation.lat, userLocation.lon], 9);
+          updateUserMarker();
+        }
         fetchPlanes();
       } else {
         input.value = '';
@@ -590,14 +697,17 @@
         async (pos) => {
           userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
           cityName = await fetchCityName(userLocation.lat, userLocation.lon);
+          initMap();
           fetchPlanes();
         },
         (err) => {
           console.error("Geolocation error:", err);
+          initMap();
           fetchPlanes();
         }
       );
     } else {
+      initMap();
       fetchPlanes();
     }
 
@@ -694,6 +804,7 @@
               grid.appendChild(card);
               enrichCard(plane.icao24); // async — populates photo, registration, type, operator
             });
+            updateMapMarkers(planes);
           }
         } else {
           statusTitle.textContent = 'Scanning airspace...';

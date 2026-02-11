@@ -3,7 +3,6 @@ import type { ViteDevServer } from "vite";
 import { createServer as createViteServer } from "vite";
 import config from "./zosite.json";
 import { Hono } from "hono";
-import { getRecentRegistrations, createRegistration } from "./backend-lib/db";
 
 // AI agents: read README.md for navigation and contribution guidance.
 type Mode = "development" | "production";
@@ -15,25 +14,6 @@ const mode: Mode =
 /**
  * Add any API routes here.
  */
-app.get("/api/hello-zo", (c) => c.json({ msg: "Hello from Zo" }));
-
-// Event registration endpoints (namespaced under _zo to avoid conflicts)
-app.get("/api/_zo/demo/registrations", (c) => {
-  const registrations = getRecentRegistrations();
-  return c.json(registrations);
-});
-
-app.post("/api/_zo/demo/register", async (c) => {
-  const body = await c.req.json();
-  const { name, email, company, notes } = body;
-
-  if (!name || !email) {
-    return c.json({ error: "Name and email are required" }, 400);
-  }
-
-  const registration = createRegistration(name, email, company, notes);
-  return c.json(registration, 201);
-});
 
 if (mode === "production") {
   configureProduction(app);

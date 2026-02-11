@@ -320,11 +320,18 @@
   <script>
     let userLocation = { lat: 39.8283, lon: -98.5795 }; // Default: central US
     let refreshInterval = null;
+    let rateLimitTimeout = null;
     let rateLimitEndTime = null;
     let rateLimitTimer = null;
-    let backoffTime = 0;
+    let backoffCount = 0;
     const BASE_REFRESH_INTERVAL = 60000; // 60 seconds
     let currentRefreshInterval = BASE_REFRESH_INTERVAL;
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
 
     // Get user location
     if (navigator.geolocation) {
@@ -374,7 +381,9 @@
       errorCard.style.display = 'none';
       rateLimitCard.style.display = 'none';
       emptyState.style.display = 'none';
+      grid.innerHTML = '';
 
+      let rateLimited = false;
       const boxSize = 1.0;
       const lamin = userLocation.lat - boxSize / 2;
       const lamax = userLocation.lat + boxSize / 2;
@@ -388,6 +397,7 @@
 
         // Handle rate limiting (429)
         if (response.status === 429) {
+          rateLimited = true;
           handleRateLimit();
           return;
         }
@@ -400,7 +410,7 @@
         const lastUpdate = new Date();
 
         // Reset backoff on success
-        backoffTime = 0;
+        backoffCount = 0;
         currentRefreshInterval = BASE_REFRESH_INTERVAL;
 
         if (data.states && data.states.length > 0) {
@@ -442,15 +452,16 @@
         errorCard.style.display = 'block';
         errorMsg.textContent = err.message;
       } finally {
-        btn.disabled = false;
-        icon.classList.remove('loading');
-        text.textContent = 'Refresh';
-        
-        // Reset and restart the interval
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
+        if (!rateLimited) {
+          btn.disabled = false;
+          icon.classList.remove('loading');
+          text.textContent = 'Refresh';
+
+          if (refreshInterval) {
+            clearInterval(refreshInterval);
+          }
+          refreshInterval = setInterval(() => fetchPlanes(false), currentRefreshInterval);
         }
-        refreshInterval = setInterval(() => fetchPlanes(false), currentRefreshInterval);
       }
     }
 
@@ -465,8 +476,9 @@
       const grid = document.getElementById('planeGrid');
 
       // Calculate backoff time (exponential: 30s, 60s, 120s, 240s, max 300s)
-      backoffTime = Math.min(30 * Math.pow(2, backoffTime > 0 ? Math.log2(backoffTime / 30) + 1 : 0), 300);
-      
+      backoffCount++;
+      const backoffTime = Math.min(30 * Math.pow(2, backoffCount - 1), 300);
+
       // Set rate limit end time
       rateLimitEndTime = Date.now() + (backoffTime * 1000);
       currentRefreshInterval = backoffTime * 1000;
@@ -484,13 +496,17 @@
       updateRetryTimer();
       rateLimitTimer = setInterval(updateRetryTimer, 1000);
 
-      // Clear any existing interval
+      // Clear any existing intervals/timeouts
       if (refreshInterval) {
         clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+      if (rateLimitTimeout) {
+        clearTimeout(rateLimitTimeout);
       }
 
       // Schedule next fetch after backoff
-      refreshInterval = setTimeout(() => {
+      rateLimitTimeout = setTimeout(() => {
         clearInterval(rateLimitTimer);
         rateLimitCard.style.display = 'none';
         btn.disabled = false;
@@ -530,10 +546,10 @@
       card.innerHTML = `
         <div class="plane-header">
           <div>
-            <div class="plane-callsign">${plane.callsign || 'Unknown'}</div>
-            <div class="plane-icao">${plane.icao24}</div>
+            <div class="plane-callsign">${escapeHtml(plane.callsign || 'Unknown')}</div>
+            <div class="plane-icao">${escapeHtml(plane.icao24)}</div>
           </div>
-          <span class="plane-badge">${plane.origin_country}</span>
+          <span class="plane-badge">${escapeHtml(plane.origin_country)}</span>
         </div>
         <div class="plane-stats">
           <div>

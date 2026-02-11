@@ -258,26 +258,33 @@
     .plane-enrich {
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      margin-top: 5px;
+      gap: 3px;
+      margin-top: 6px;
+    }
+    .plane-enrich-loading {
+      font-size: 11px;
+      color: #94a3b8;
+      font-style: italic;
     }
     .plane-registration {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
-      font-size: 12px;
-      color: #475569;
-      background: #f1f5f9;
-      padding: 1px 5px;
-      border-radius: 3px;
+      font-size: 13px;
+      color: #0c4a6e;
+      background: #e0f2fe;
+      padding: 2px 8px;
+      border-radius: 4px;
       display: inline-block;
+      font-weight: 600;
     }
     .plane-type {
+      font-size: 13px;
+      color: #334155;
+      font-weight: 600;
+    }
+    .plane-operator {
       font-size: 12px;
       color: #475569;
       font-weight: 500;
-    }
-    .plane-operator {
-      font-size: 11px;
-      color: #64748b;
     }
     .squawk-badge {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
@@ -538,12 +545,16 @@
       ]);
 
       const enrichEl = document.getElementById(`enrich-${icao24}`);
-      if (enrichEl && info) {
-        let html = '';
-        if (info.registration) html += `<span class="plane-registration">${escapeHtml(info.registration)}</span>`;
-        if (info.type)         html += `<span class="plane-type">${escapeHtml(info.type)}</span>`;
-        if (info.operator)     html += `<span class="plane-operator">${escapeHtml(info.operator)}</span>`;
-        enrichEl.innerHTML = html;
+      if (enrichEl) {
+        if (info) {
+          let html = '';
+          if (info.registration) html += `<span class="plane-registration">${escapeHtml(info.registration)}</span>`;
+          if (info.type)         html += `<span class="plane-type">✈ ${escapeHtml(info.type)}</span>`;
+          if (info.operator)     html += `<span class="plane-operator">Owner: ${escapeHtml(info.operator)}</span>`;
+          enrichEl.innerHTML = html;
+        } else {
+          enrichEl.innerHTML = '<span class="plane-operator">No registration data available</span>';
+        }
       }
 
       const photoEl = document.getElementById(`photo-${icao24}`);
@@ -563,7 +574,9 @@
     function createPlaneIcon(heading) {
       const deg = heading || 0;
       return L.divIcon({
-        html: `<div style="transform:rotate(${deg}deg);font-size:20px;line-height:1;color:#0284c7;text-shadow:0 1px 4px rgba(0,0,0,0.35);">✈</div>`,
+        html: `<svg viewBox="0 0 32 32" width="22" height="22" style="transform:rotate(${deg}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.4));">
+          <path d="M17 1h-2v13L2 21v3l13-4v8l-4 3v2l5-2 5 2v-2l-4-3v-8l13 4v-3L17 14z" fill="#0284c7"/>
+        </svg>`,
         className: 'plane-marker-icon',
         iconSize: [24, 24],
         iconAnchor: [12, 12],
@@ -782,14 +795,20 @@
               icao24: state[0],
               callsign: state[1],
               origin_country: state[2],
+              timePosition: state[3],
+              lastContact: state[4],
               lat: state[6],
               lon: state[5],
               alt: state[7],
+              onGround: state[8],
               vel: state[9],
               track: state[10],
               vRate: state[11],
-              onGround: state[8],
-              squawk: state[14]
+              geoAlt: state[13],
+              squawk: state[14],
+              spi: state[15],
+              positionSource: state[16],
+              category: state[17],
             }));
 
           statusTitle.textContent = `Found ${planes.length} aircraft`;
@@ -899,47 +918,90 @@
       card.className = 'plane-card';
       card.id = `card-${plane.icao24}`;
 
-      const alt = plane.alt ? `${Math.round(plane.alt * 3.28084).toLocaleString()} ft` : 'N/A';
-      const speed = plane.vel ? `${Math.round(plane.vel * 1.94384)} kts` : 'N/A';
+      const alt = plane.alt != null ? `${Math.round(plane.alt * 3.28084).toLocaleString()} ft` : 'N/A';
+      const geoAlt = plane.geoAlt != null ? `${Math.round(plane.geoAlt * 3.28084).toLocaleString()} ft` : null;
+      const speed = plane.vel != null ? `${Math.round(plane.vel * 1.94384)} kts` : 'N/A';
       const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-      const heading = plane.track ? `${directions[Math.round(plane.track / 45) % 8]} (${Math.round(plane.track)}°)` : '—';
+      const heading = plane.track != null ? `${directions[Math.round(plane.track / 45) % 8]} (${Math.round(plane.track)}°)` : '—';
 
       let vStatus = 'LEVEL';
       let vClass = '';
-      if (plane.vRate && Math.abs(plane.vRate) >= 0.5) {
+      let vRateStr = '';
+      if (plane.vRate != null && Math.abs(plane.vRate) >= 0.5) {
         vStatus = plane.vRate > 0 ? 'CLIMB' : 'DESCEND';
         vClass = plane.vRate > 0 ? 'climb' : 'descend';
+        const fpm = Math.round(plane.vRate * 196.85); // m/s to ft/min
+        vRateStr = ` (${fpm > 0 ? '+' : ''}${fpm.toLocaleString()} fpm)`;
       }
 
       const SQUAWK_LABELS = { '7500': 'HIJACK', '7600': 'RADIO FAIL', '7700': 'EMERGENCY' };
-      const squawkHtml = plane.squawk ? (() => {
-        const label = SQUAWK_LABELS[plane.squawk] || plane.squawk;
+      const squawkDisplay = plane.squawk ? (() => {
+        const special = SQUAWK_LABELS[plane.squawk];
+        const label = special ? `${plane.squawk} — ${special}` : plane.squawk;
         const cls = (plane.squawk === '7500' || plane.squawk === '7700') ? 'squawk-emergency'
                   : plane.squawk === '7600' ? 'squawk-radio' : '';
         return `<span class="squawk-badge ${cls}">${escapeHtml(label)}</span>`;
       })() : '';
+
+      const groundStatus = plane.onGround
+        ? '<span style="color:#ea580c;font-weight:700;">ON GROUND</span>'
+        : '<span style="color:#16a34a;font-weight:700;">AIRBORNE</span>';
+
+      const SOURCE_LABELS = { 0: 'ADS-B', 1: 'ASTERIX', 2: 'MLAT', 3: 'FLARM' };
+      const sourceLabel = plane.positionSource != null ? (SOURCE_LABELS[plane.positionSource] || `Source ${plane.positionSource}`) : null;
+
+      const lastSeen = plane.lastContact ? (() => {
+        const ago = Math.round(Date.now() / 1000 - plane.lastContact);
+        if (ago < 5) return 'Just now';
+        if (ago < 60) return `${ago}s ago`;
+        return `${Math.floor(ago / 60)}m ${ago % 60}s ago`;
+      })() : null;
+
+      const CATEGORY_LABELS = {
+        0: 'No info', 1: 'No info', 2: 'Light (< 15500 lbs)', 3: 'Small (15500–75000 lbs)',
+        4: 'Large (75000–300000 lbs)', 5: 'High vortex large', 6: 'Heavy (> 300000 lbs)',
+        7: 'High performance', 8: 'Rotorcraft', 9: 'Glider / sailplane',
+        10: 'Lighter-than-air', 11: 'Parachutist / skydiver', 12: 'Ultralight / hang-glider',
+        14: 'UAV / drone', 15: 'Space / transatmospheric', 16: 'Surface emergency vehicle',
+        17: 'Surface service vehicle', 18: 'Point obstacle', 19: 'Cluster obstacle', 20: 'Line obstacle',
+      };
+      const categoryLabel = (plane.category != null && plane.category > 1) ? CATEGORY_LABELS[plane.category] || null : null;
 
       card.innerHTML = `
         <div class="plane-photo-wrap" id="photo-${plane.icao24}"></div>
         <div class="plane-body">
           <div class="plane-header">
             <div>
-              <div class="plane-callsign">${escapeHtml(plane.callsign || 'Unknown')}</div>
+              <div class="plane-callsign">${escapeHtml((plane.callsign || '').trim() || 'Unknown')}</div>
               <div class="plane-icao">${escapeHtml(plane.icao24)}</div>
-              <div class="plane-enrich" id="enrich-${plane.icao24}"></div>
+              <div class="plane-enrich" id="enrich-${plane.icao24}">
+                <span class="plane-enrich-loading">Loading aircraft info...</span>
+              </div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
               <span class="plane-badge">${escapeHtml(plane.origin_country)}</span>
-              ${squawkHtml}
+              ${squawkDisplay}
             </div>
           </div>
           <div class="plane-stats">
             <div>
-              <div class="stat-label">Altitude</div>
+              <div class="stat-label">Status</div>
+              <div class="stat-value">${groundStatus}</div>
+            </div>
+            <div>
+              <div class="stat-label">Squawk</div>
+              <div class="stat-value" style="font-family:'SF Mono','Monaco','Cascadia Code',monospace;">${plane.squawk ? escapeHtml(plane.squawk) : '—'}</div>
+            </div>
+            <div>
+              <div class="stat-label">Altitude (baro)</div>
               <div class="stat-value">${alt}</div>
             </div>
             <div>
-              <div class="stat-label">Speed</div>
+              <div class="stat-label">Altitude (geo)</div>
+              <div class="stat-value">${geoAlt || 'N/A'}</div>
+            </div>
+            <div>
+              <div class="stat-label">Ground Speed</div>
               <div class="stat-value">${speed}</div>
             </div>
             <div>
@@ -948,8 +1010,24 @@
             </div>
             <div>
               <div class="stat-label">Vertical</div>
-              <div class="stat-value ${vClass}">${vStatus}</div>
+              <div class="stat-value ${vClass}">${vStatus}${vRateStr}</div>
             </div>
+            ${sourceLabel ? `<div>
+              <div class="stat-label">Source</div>
+              <div class="stat-value">${sourceLabel}</div>
+            </div>` : ''}
+            ${categoryLabel ? `<div>
+              <div class="stat-label">Category</div>
+              <div class="stat-value" style="font-size:13px;">${categoryLabel}</div>
+            </div>` : ''}
+            ${lastSeen ? `<div>
+              <div class="stat-label">Last Contact</div>
+              <div class="stat-value">${lastSeen}</div>
+            </div>` : ''}
+            ${plane.spi ? `<div>
+              <div class="stat-label">SPI</div>
+              <div class="stat-value" style="color:#dc2626;font-weight:700;">ACTIVE</div>
+            </div>` : ''}
           </div>
           ${plane.lat && plane.lon ? `
             <div class="plane-position">

@@ -209,7 +209,8 @@
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(12px);
       border-radius: 16px;
-      padding: 20px;
+      padding: 0;
+      overflow: hidden;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
       transition: all 0.3s ease;
       border: 1px solid rgba(255, 255, 255, 0.5);
@@ -217,6 +218,76 @@
     .plane-card:hover {
       transform: translateY(-4px);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    }
+    .plane-photo-wrap img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      display: block;
+    }
+    .plane-photo-credit {
+      font-size: 10px;
+      color: #94a3b8;
+      text-align: right;
+      padding: 3px 10px;
+      background: rgba(0, 0, 0, 0.04);
+    }
+    .plane-photo-credit a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .plane-body {
+      padding: 16px 20px 20px;
+    }
+    .plane-enrich {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 5px;
+    }
+    .plane-registration {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 12px;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    .plane-type {
+      font-size: 12px;
+      color: #475569;
+      font-weight: 500;
+    }
+    .plane-operator {
+      font-size: 11px;
+      color: #64748b;
+    }
+    .squawk-badge {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #64748b;
+      display: inline-block;
+    }
+    .squawk-emergency {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      animation: squawk-pulse 1.5s ease-in-out infinite;
+    }
+    .squawk-radio {
+      background: #fff7ed;
+      color: #ea580c;
+      border: 1px solid #fed7aa;
+    }
+    @keyframes squawk-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
     .plane-header {
       display: flex;
@@ -392,6 +463,77 @@
       return null;
     }
 
+    const enrichmentCache = new Map(); // icao24 -> info object or null
+    const photoCache = new Map();      // icao24 -> photo object or null
+
+    async function fetchAircraftInfo(icao24) {
+      if (enrichmentCache.has(icao24)) return enrichmentCache.get(icao24);
+      try {
+        const res = await fetch(`https://api.adsbdb.com/v0/aircraft/${icao24}`);
+        if (res.ok) {
+          const data = await res.json();
+          const a = data.response?.aircraft;
+          if (a) {
+            const info = {
+              registration: a.Registration || null,
+              type: a.Type || null,
+              operator: a.RegisteredOwners || null,
+            };
+            enrichmentCache.set(icao24, info);
+            return info;
+          }
+        }
+      } catch (e) {}
+      enrichmentCache.set(icao24, null);
+      return null;
+    }
+
+    async function fetchAircraftPhoto(icao24) {
+      if (photoCache.has(icao24)) return photoCache.get(icao24);
+      try {
+        const res = await fetch(`https://api.planespotters.net/pub/photos/hex/${icao24}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.photos && data.photos.length > 0) {
+            const p = data.photos[0];
+            const photo = {
+              url: p.thumbnail_large?.src || p.thumbnail?.src || null,
+              credit: p.photographer || null,
+              link: p.link || null,
+            };
+            photoCache.set(icao24, photo);
+            return photo;
+          }
+        }
+      } catch (e) {}
+      photoCache.set(icao24, null);
+      return null;
+    }
+
+    async function enrichCard(icao24) {
+      const [info, photo] = await Promise.all([
+        fetchAircraftInfo(icao24),
+        fetchAircraftPhoto(icao24),
+      ]);
+
+      const enrichEl = document.getElementById(`enrich-${icao24}`);
+      if (enrichEl && info) {
+        let html = '';
+        if (info.registration) html += `<span class="plane-registration">${escapeHtml(info.registration)}</span>`;
+        if (info.type)         html += `<span class="plane-type">${escapeHtml(info.type)}</span>`;
+        if (info.operator)     html += `<span class="plane-operator">${escapeHtml(info.operator)}</span>`;
+        enrichEl.innerHTML = html;
+      }
+
+      const photoEl = document.getElementById(`photo-${icao24}`);
+      if (photoEl && photo?.url) {
+        const creditHtml = photo.credit
+          ? `<div class="plane-photo-credit">📷 <a href="${escapeHtml(photo.link || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(photo.credit)}</a></div>`
+          : '';
+        photoEl.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="Aircraft photo" loading="lazy" />${creditHtml}`;
+      }
+    }
+
     async function geocodeLocation(query) {
       try {
         const response = await fetch(
@@ -536,7 +678,8 @@
               vel: state[9],
               track: state[10],
               vRate: state[11],
-              onGround: state[8]
+              onGround: state[8],
+              squawk: state[14]
             }));
 
           statusTitle.textContent = `Found ${planes.length} aircraft`;
@@ -549,6 +692,7 @@
             planes.forEach(plane => {
               const card = createPlaneCard(plane);
               grid.appendChild(card);
+              enrichCard(plane.icao24); // async — populates photo, registration, type, operator
             });
           }
         } else {
@@ -642,12 +786,13 @@
     function createPlaneCard(plane) {
       const card = document.createElement('div');
       card.className = 'plane-card';
+      card.id = `card-${plane.icao24}`;
 
       const alt = plane.alt ? `${Math.round(plane.alt * 3.28084).toLocaleString()} ft` : 'N/A';
       const speed = plane.vel ? `${Math.round(plane.vel * 1.94384)} kts` : 'N/A';
       const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
       const heading = plane.track ? `${directions[Math.round(plane.track / 45) % 8]} (${Math.round(plane.track)}°)` : '—';
-      
+
       let vStatus = 'LEVEL';
       let vClass = '';
       if (plane.vRate && Math.abs(plane.vRate) >= 0.5) {
@@ -655,37 +800,52 @@
         vClass = plane.vRate > 0 ? 'climb' : 'descend';
       }
 
+      const SQUAWK_LABELS = { '7500': 'HIJACK', '7600': 'RADIO FAIL', '7700': 'EMERGENCY' };
+      const squawkHtml = plane.squawk ? (() => {
+        const label = SQUAWK_LABELS[plane.squawk] || plane.squawk;
+        const cls = (plane.squawk === '7500' || plane.squawk === '7700') ? 'squawk-emergency'
+                  : plane.squawk === '7600' ? 'squawk-radio' : '';
+        return `<span class="squawk-badge ${cls}">${escapeHtml(label)}</span>`;
+      })() : '';
+
       card.innerHTML = `
-        <div class="plane-header">
-          <div>
-            <div class="plane-callsign">${escapeHtml(plane.callsign || 'Unknown')}</div>
-            <div class="plane-icao">${escapeHtml(plane.icao24)}</div>
+        <div class="plane-photo-wrap" id="photo-${plane.icao24}"></div>
+        <div class="plane-body">
+          <div class="plane-header">
+            <div>
+              <div class="plane-callsign">${escapeHtml(plane.callsign || 'Unknown')}</div>
+              <div class="plane-icao">${escapeHtml(plane.icao24)}</div>
+              <div class="plane-enrich" id="enrich-${plane.icao24}"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              <span class="plane-badge">${escapeHtml(plane.origin_country)}</span>
+              ${squawkHtml}
+            </div>
           </div>
-          <span class="plane-badge">${escapeHtml(plane.origin_country)}</span>
+          <div class="plane-stats">
+            <div>
+              <div class="stat-label">Altitude</div>
+              <div class="stat-value">${alt}</div>
+            </div>
+            <div>
+              <div class="stat-label">Speed</div>
+              <div class="stat-value">${speed}</div>
+            </div>
+            <div>
+              <div class="stat-label">Heading</div>
+              <div class="stat-value">${heading}</div>
+            </div>
+            <div>
+              <div class="stat-label">Vertical</div>
+              <div class="stat-value ${vClass}">${vStatus}</div>
+            </div>
+          </div>
+          ${plane.lat && plane.lon ? `
+            <div class="plane-position">
+              Position: ${plane.lat.toFixed(4)}°, ${plane.lon.toFixed(4)}°
+            </div>
+          ` : ''}
         </div>
-        <div class="plane-stats">
-          <div>
-            <div class="stat-label">Altitude</div>
-            <div class="stat-value">${alt}</div>
-          </div>
-          <div>
-            <div class="stat-label">Speed</div>
-            <div class="stat-value">${speed}</div>
-          </div>
-          <div>
-            <div class="stat-label">Heading</div>
-            <div class="stat-value">${heading}</div>
-          </div>
-          <div>
-            <div class="stat-label">Vertical</div>
-            <div class="stat-value ${vClass}">${vStatus}</div>
-          </div>
-        </div>
-        ${plane.lat && plane.lon ? `
-          <div class="plane-position">
-            Position: ${plane.lat.toFixed(4)}°, ${plane.lon.toFixed(4)}°
-          </div>
-        ` : ''}
       `;
 
       return card;

@@ -116,6 +116,180 @@
       cursor: not-allowed;
       transform: none;
     }
+    button.active {
+      background: #0ea5e9;
+      color: white;
+    }
+    .filter-bar {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-group label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .filter-group input, .filter-group select {
+      padding: 8px 10px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      font-size: 13px;
+      font-family: inherit;
+      color: #1e293b;
+      outline: none;
+      width: 110px;
+    }
+    .filter-group select {
+      width: 120px;
+    }
+    .filter-count {
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      padding: 8px 0;
+      white-space: nowrap;
+    }
+    .filter-clear-btn {
+      padding: 8px 14px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #dc2626;
+      box-shadow: none;
+    }
+    .filter-clear-btn:hover {
+      background: white;
+    }
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 24px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      box-shadow: none;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover:not(.tab-active) {
+      background: rgba(255, 255, 255, 0.1);
+      transform: none;
+      box-shadow: none;
+    }
+    .tab-btn.tab-active {
+      background: rgba(255, 255, 255, 0.95);
+      color: #0c4a6e;
+      box-shadow: none;
+    }
+    .history-panel {
+      display: none;
+    }
+    .history-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .history-stat-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .history-stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .history-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0c4a6e;
+      margin-top: 4px;
+    }
+    .history-stat-sub {
+      font-size: 13px;
+      color: #475569;
+      margin-top: 4px;
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .history-item {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .history-item-main {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .history-item-callsign {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0c4a6e;
+    }
+    .history-item-icao {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 12px;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .history-item-details {
+      font-size: 13px;
+      color: #475569;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .history-load-more {
+      margin: 24px auto;
+      display: block;
+    }
     .loading {
       animation: spin 1s linear infinite;
     }
@@ -285,6 +459,30 @@
       font-size: 12px;
       color: #475569;
       font-weight: 500;
+    }
+    .plane-manufacturer {
+      font-size: 12px;
+      color: #334155;
+      font-weight: 500;
+    }
+    .plane-icao-type {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 11px;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .plane-flag-code {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #0369a1;
+      background: #e0f2fe;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
     }
     .squawk-badge {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
@@ -457,6 +655,10 @@
             <span id="searchText">Go</span>
           </button>
         </form>
+        <button onclick="toggleTrails()" id="trailsBtn">
+          <span>〰️</span>
+          <span>Trails</span>
+        </button>
         <button onclick="manualRefresh()" id="refreshBtn">
           <span id="refreshIcon">↻</span>
           <span id="refreshText">Refresh</span>
@@ -467,6 +669,48 @@
     <div class="status-card">
       <div class="status-title" id="statusTitle">Loading...</div>
       <div class="status-desc" id="statusDesc"></div>
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+      <div class="filter-group">
+        <label>Alt Min (ft)</label>
+        <input type="number" id="filterAltMin" placeholder="0" onchange="onFilterChange()">
+      </div>
+      <div class="filter-group">
+        <label>Alt Max (ft)</label>
+        <input type="number" id="filterAltMax" placeholder="60000" onchange="onFilterChange()">
+      </div>
+      <div class="filter-group">
+        <label>Speed Min (kts)</label>
+        <input type="number" id="filterSpeedMin" placeholder="0" onchange="onFilterChange()">
+      </div>
+      <div class="filter-group">
+        <label>Speed Max (kts)</label>
+        <input type="number" id="filterSpeedMax" placeholder="600" onchange="onFilterChange()">
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="filterAirborne" onchange="onFilterChange()">
+          <option value="">All</option>
+          <option value="airborne">Airborne</option>
+          <option value="ground">On Ground</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Country</label>
+        <input type="text" id="filterCountry" placeholder="Any" oninput="onFilterChange()">
+      </div>
+      <div class="filter-group">
+        <label>Squawk</label>
+        <select id="filterSquawk" onchange="onFilterChange()">
+          <option value="">All</option>
+          <option value="emergency">Emergency</option>
+          <option value="vfr">VFR (1200)</option>
+          <option value="military">Military</option>
+        </select>
+      </div>
+      <button class="filter-clear-btn" onclick="clearFilters()">Clear</button>
+      <span class="filter-count" id="filterCount"></span>
     </div>
 
     <div class="map-container">
@@ -490,7 +734,20 @@
       <p style="font-size: 15px;">Planes will appear here when they enter your area</p>
     </div>
 
-    <div class="grid" id="planeGrid"></div>
+    <div class="tab-bar">
+      <button class="tab-btn tab-active" onclick="switchTab('live')" id="tabLive">Live</button>
+      <button class="tab-btn" onclick="switchTab('history')" id="tabHistory">History</button>
+    </div>
+
+    <div id="liveView">
+      <div class="grid" id="planeGrid"></div>
+    </div>
+
+    <div class="history-panel" id="historyPanel">
+      <div class="history-stats" id="historyStats"></div>
+      <div class="history-list" id="historyList"></div>
+      <button class="history-load-more" id="loadMoreBtn" onclick="loadMoreHistory()" style="display:none;">Load More</button>
+    </div>
 
     <footer>
       <p>Data provided by <a href="https://opensky-network.org" target="_blank" rel="noopener noreferrer">OpenSky Network</a> • <a href="https://opensky-network.org" target="_blank" rel="noopener noreferrer">Learn more</a></p>
@@ -542,9 +799,14 @@
           const a = data.response?.aircraft;
           if (a) {
             const info = {
-              registration: a.Registration || null,
-              type: a.Type || null,
-              operator: a.RegisteredOwners || null,
+              registration: a.registration || a.Registration || null,
+              type: a.type || a.Type || null,
+              icaoType: a.icao_type || null,
+              manufacturer: a.manufacturer || null,
+              operator: a.registered_owner || a.RegisteredOwners || null,
+              flagCode: a.registered_owner_operator_flag_code || null,
+              fallbackPhoto: a.url_photo || null,
+              fallbackPhotoThumb: a.url_photo_thumbnail || null,
             };
             enrichmentCache.set(icao24, info);
             return info;
@@ -588,8 +850,17 @@
         if (info) {
           let html = '';
           if (info.registration) html += `<span class="plane-registration">${escapeHtml(info.registration)}</span>`;
-          if (info.type)         html += `<span class="plane-type">✈ ${escapeHtml(info.type)}</span>`;
-          if (info.operator)     html += `<span class="plane-operator">Owner: ${escapeHtml(info.operator)}</span>`;
+          if (info.manufacturer || info.type) {
+            const mfr = info.manufacturer ? escapeHtml(info.manufacturer) : '';
+            const type = info.type ? escapeHtml(info.type) : '';
+            const sep = mfr && type ? ' ' : '';
+            html += `<span class="plane-type">${mfr}${sep}${type}</span>`;
+          }
+          if (info.icaoType) html += `<span class="plane-icao-type">${escapeHtml(info.icaoType)}</span>`;
+          if (info.operator) {
+            const flag = info.flagCode ? `<span class="plane-flag-code">${escapeHtml(info.flagCode)}</span> ` : '';
+            html += `<span class="plane-operator">${flag}${escapeHtml(info.operator)}</span>`;
+          }
           enrichEl.innerHTML = html;
         } else {
           enrichEl.innerHTML = '<span class="plane-operator">No registration data available</span>';
@@ -597,11 +868,14 @@
       }
 
       const photoEl = document.getElementById(`photo-${icao24}`);
-      if (photoEl && photo?.url) {
-        const creditHtml = photo.credit
-          ? `<div class="plane-photo-credit">📷 <a href="${escapeHtml(photo.link || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(photo.credit)}</a></div>`
-          : '';
-        photoEl.innerHTML = `<img src="${escapeHtml(photo.url)}" alt="Aircraft photo" loading="lazy" />${creditHtml}`;
+      if (photoEl) {
+        const photoUrl = photo?.url || info?.fallbackPhoto || info?.fallbackPhotoThumb || null;
+        if (photoUrl) {
+          const creditHtml = photo?.credit
+            ? `<div class="plane-photo-credit">📷 <a href="${escapeHtml(photo.link || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(photo.credit)}</a></div>`
+            : (photo?.url ? '' : `<div class="plane-photo-credit">via airport-data.com</div>`);
+          photoEl.innerHTML = `<img src="${escapeHtml(photoUrl)}" alt="Aircraft photo" loading="lazy" />${creditHtml}`;
+        }
       }
     }
 
@@ -609,6 +883,314 @@
     let map = null;
     let userMarker = null;
     const planeMarkers = new Map(); // icao24 -> L.marker
+    const positionHistory = new Map(); // icao24 -> [{lat, lon, alt, timestamp}]
+    const trailPolylines = new Map(); // icao24 -> L.polyline
+    let trailsVisible = false;
+
+    function altitudeToColor(altMeters) {
+      if (altMeters == null || altMeters <= 0) return '#22c55e'; // green - ground level
+      const altFt = altMeters * 3.28084;
+      if (altFt < 5000) return '#22c55e';   // green
+      if (altFt < 15000) return '#eab308';  // yellow
+      if (altFt < 30000) return '#f97316';  // orange
+      return '#ef4444';                      // red
+    }
+
+    function updatePositionHistory(planes) {
+      const now = Date.now();
+      const currentIcaos = new Set(planes.map(p => p.icao24));
+
+      // Remove stale aircraft (not seen in this fetch)
+      for (const icao24 of positionHistory.keys()) {
+        if (!currentIcaos.has(icao24)) {
+          positionHistory.delete(icao24);
+          if (trailPolylines.has(icao24)) {
+            trailPolylines.get(icao24).remove();
+            trailPolylines.delete(icao24);
+          }
+        }
+      }
+
+      // Append new positions
+      for (const plane of planes) {
+        if (plane.lat == null || plane.lon == null) continue;
+        const history = positionHistory.get(plane.icao24) || [];
+        history.push({ lat: plane.lat, lon: plane.lon, alt: plane.alt, timestamp: now });
+        if (history.length > 30) history.splice(0, history.length - 30);
+        positionHistory.set(plane.icao24, history);
+      }
+    }
+
+    function updateTrails(planes) {
+      if (!map) return;
+      const visibleIcaos = new Set(planes.map(p => p.icao24));
+
+      // Remove polylines for planes not in the visible set
+      for (const [icao24, polyline] of trailPolylines) {
+        if (!visibleIcaos.has(icao24)) {
+          polyline.remove();
+          trailPolylines.delete(icao24);
+        }
+      }
+
+      for (const plane of planes) {
+        const history = positionHistory.get(plane.icao24);
+        if (!history || history.length < 2) continue;
+
+        const latlngs = history.map(p => [p.lat, p.lon]);
+        const lastAlt = history[history.length - 1].alt;
+        const color = altitudeToColor(lastAlt);
+
+        if (trailPolylines.has(plane.icao24)) {
+          const poly = trailPolylines.get(plane.icao24);
+          poly.setLatLngs(latlngs);
+          poly.setStyle({ color });
+        } else {
+          const poly = L.polyline(latlngs, {
+            color,
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '6 4',
+          });
+          if (trailsVisible) poly.addTo(map);
+          trailPolylines.set(plane.icao24, poly);
+        }
+      }
+    }
+
+    function toggleTrails() {
+      trailsVisible = !trailsVisible;
+      const btn = document.getElementById('trailsBtn');
+      btn.classList.toggle('active', trailsVisible);
+      btn.querySelector('span:last-child').textContent = trailsVisible ? 'Trails On' : 'Trails';
+
+      for (const [, polyline] of trailPolylines) {
+        if (trailsVisible) {
+          polyline.addTo(map);
+        } else {
+          polyline.remove();
+        }
+      }
+    }
+
+    // ── Filtering ────────────────────────────────────────────────────────
+    let allPlanes = [];
+
+    function loadFilterState() {
+      try {
+        const saved = localStorage.getItem('planeTrackerFilters');
+        if (saved) {
+          const s = JSON.parse(saved);
+          if (s.altMin) document.getElementById('filterAltMin').value = s.altMin;
+          if (s.altMax) document.getElementById('filterAltMax').value = s.altMax;
+          if (s.speedMin) document.getElementById('filterSpeedMin').value = s.speedMin;
+          if (s.speedMax) document.getElementById('filterSpeedMax').value = s.speedMax;
+          if (s.airborne) document.getElementById('filterAirborne').value = s.airborne;
+          if (s.country) document.getElementById('filterCountry').value = s.country;
+          if (s.squawk) document.getElementById('filterSquawk').value = s.squawk;
+        }
+      } catch (e) {}
+    }
+
+    function saveFilterState() {
+      const state = {
+        altMin: document.getElementById('filterAltMin').value,
+        altMax: document.getElementById('filterAltMax').value,
+        speedMin: document.getElementById('filterSpeedMin').value,
+        speedMax: document.getElementById('filterSpeedMax').value,
+        airborne: document.getElementById('filterAirborne').value,
+        country: document.getElementById('filterCountry').value,
+        squawk: document.getElementById('filterSquawk').value,
+      };
+      localStorage.setItem('planeTrackerFilters', JSON.stringify(state));
+    }
+
+    function applyFilters(planes) {
+      const altMin = parseFloat(document.getElementById('filterAltMin').value) || null;
+      const altMax = parseFloat(document.getElementById('filterAltMax').value) || null;
+      const speedMin = parseFloat(document.getElementById('filterSpeedMin').value) || null;
+      const speedMax = parseFloat(document.getElementById('filterSpeedMax').value) || null;
+      const airborne = document.getElementById('filterAirborne').value;
+      const country = document.getElementById('filterCountry').value.trim().toLowerCase();
+      const squawk = document.getElementById('filterSquawk').value;
+
+      return planes.filter(p => {
+        const altFt = p.alt != null ? p.alt * 3.28084 : null;
+        if (altMin != null && (altFt == null || altFt < altMin)) return false;
+        if (altMax != null && (altFt == null || altFt > altMax)) return false;
+
+        const speedKts = p.vel != null ? p.vel * 1.94384 : null;
+        if (speedMin != null && (speedKts == null || speedKts < speedMin)) return false;
+        if (speedMax != null && (speedKts == null || speedKts > speedMax)) return false;
+
+        if (airborne === 'airborne' && p.onGround) return false;
+        if (airborne === 'ground' && !p.onGround) return false;
+
+        if (country && !(p.origin_country || '').toLowerCase().includes(country)) return false;
+
+        if (squawk === 'emergency' && !['7500', '7600', '7700'].includes(p.squawk)) return false;
+        if (squawk === 'vfr' && p.squawk !== '1200') return false;
+        if (squawk === 'military' && !(p.squawk >= '4000' && p.squawk <= '4477')) return false;
+
+        return true;
+      });
+    }
+
+    function renderFilteredPlanes() {
+      const grid = document.getElementById('planeGrid');
+      const emptyState = document.getElementById('emptyState');
+      grid.innerHTML = '';
+
+      const filtered = applyFilters(allPlanes);
+      updateFilterCount(filtered.length, allPlanes.length);
+
+      if (filtered.length === 0 && allPlanes.length > 0) {
+        emptyState.style.display = 'block';
+      } else {
+        emptyState.style.display = filtered.length === 0 ? 'block' : 'none';
+      }
+
+      filtered.forEach(plane => {
+        const card = createPlaneCard(plane);
+        grid.appendChild(card);
+        enrichCard(plane.icao24);
+      });
+
+      updateMapMarkers(filtered);
+      updateTrails(filtered);
+    }
+
+    function updateFilterCount(shown, total) {
+      const el = document.getElementById('filterCount');
+      if (shown === total) {
+        el.textContent = `${total} aircraft`;
+      } else {
+        el.textContent = `${shown} of ${total} aircraft`;
+      }
+    }
+
+    function onFilterChange() {
+      saveFilterState();
+      if (allPlanes.length > 0) renderFilteredPlanes();
+    }
+
+    function clearFilters() {
+      document.getElementById('filterAltMin').value = '';
+      document.getElementById('filterAltMax').value = '';
+      document.getElementById('filterSpeedMin').value = '';
+      document.getElementById('filterSpeedMax').value = '';
+      document.getElementById('filterAirborne').value = '';
+      document.getElementById('filterCountry').value = '';
+      document.getElementById('filterSquawk').value = '';
+      onFilterChange();
+    }
+
+    // ── History ─────────────────────────────────────────────────────────
+    let currentTab = 'live';
+    let historyOffset = 0;
+    const HISTORY_PAGE_SIZE = 50;
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tabLive').classList.toggle('tab-active', tab === 'live');
+      document.getElementById('tabHistory').classList.toggle('tab-active', tab === 'history');
+      document.getElementById('liveView').style.display = tab === 'live' ? '' : 'none';
+      document.getElementById('filterBar').style.display = tab === 'live' ? '' : 'none';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('historyPanel').style.display = tab === 'history' ? 'block' : 'none';
+
+      if (tab === 'history') {
+        historyOffset = 0;
+        loadStats();
+        loadHistory();
+      }
+    }
+
+    async function logSightings(planes) {
+      try {
+        await fetch('/api/sightings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planes }),
+        });
+      } catch (e) {
+        // silent fail
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) return;
+        const stats = await res.json();
+        const el = document.getElementById('historyStats');
+
+        const countriesHtml = stats.topCountries
+          .map(c => `${escapeHtml(c.origin_country)}: ${c.count}`)
+          .join('<br>');
+
+        el.innerHTML = `
+          <div class="history-stat-card">
+            <div class="history-stat-label">Total Unique Aircraft</div>
+            <div class="history-stat-value">${stats.totalUnique.toLocaleString()}</div>
+          </div>
+          <div class="history-stat-card">
+            <div class="history-stat-label">Last 24 Hours</div>
+            <div class="history-stat-value">${stats.recentCount.toLocaleString()}</div>
+            <div class="history-stat-sub">unique aircraft</div>
+          </div>
+          <div class="history-stat-card">
+            <div class="history-stat-label">Top Countries</div>
+            <div class="history-stat-sub" style="margin-top:8px;line-height:1.8;">${countriesHtml || 'No data yet'}</div>
+          </div>
+        `;
+      } catch (e) {}
+    }
+
+    async function loadHistory(append = false) {
+      try {
+        const res = await fetch(`/api/history?limit=${HISTORY_PAGE_SIZE}&offset=${historyOffset}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = document.getElementById('historyList');
+        const btn = document.getElementById('loadMoreBtn');
+
+        if (!append) list.innerHTML = '';
+
+        for (const s of data.history) {
+          const firstSeen = new Date(s.first_seen * 1000).toLocaleString();
+          const lastSeen = new Date(s.last_seen * 1000).toLocaleString();
+          const altRange = s.min_alt != null && s.max_alt != null
+            ? `${Math.round(s.min_alt * 3.28084).toLocaleString()} – ${Math.round(s.max_alt * 3.28084).toLocaleString()} ft`
+            : 'N/A';
+          const maxSpeed = s.max_speed != null ? `${Math.round(s.max_speed * 1.94384)} kts` : 'N/A';
+
+          const item = document.createElement('div');
+          item.className = 'history-item';
+          item.innerHTML = `
+            <div class="history-item-main">
+              <span class="history-item-callsign">${escapeHtml((s.callsign || '').trim() || 'Unknown')}</span>
+              <span class="history-item-icao">${escapeHtml(s.icao24)}</span>
+              <span style="font-size:12px;color:#64748b;">${escapeHtml(s.origin_country || '')}</span>
+            </div>
+            <div class="history-item-details">
+              <span>Alt: ${altRange}</span>
+              <span>Max: ${maxSpeed}</span>
+              <span>First: ${firstSeen}</span>
+              <span>Last: ${lastSeen}</span>
+            </div>
+          `;
+          list.appendChild(item);
+        }
+
+        btn.style.display = data.history.length === HISTORY_PAGE_SIZE ? '' : 'none';
+      } catch (e) {}
+    }
+
+    function loadMoreHistory() {
+      historyOffset += HISTORY_PAGE_SIZE;
+      loadHistory(true);
+    }
 
     function createPlaneIcon(heading) {
       const deg = heading || 0;
@@ -731,6 +1313,12 @@
         userLocation = { lat: result.lat, lon: result.lon };
         cityName = result.name;
         input.value = '';
+
+        // Clear trails on location change
+        positionHistory.clear();
+        for (const [, poly] of trailPolylines) poly.remove();
+        trailPolylines.clear();
+
         if (map) {
           map.setView([userLocation.lat, userLocation.lon], 9);
           updateUserMarker();
@@ -742,6 +1330,9 @@
         setTimeout(() => { input.placeholder = 'City, state or zip code'; }, 3000);
       }
     }
+
+    // Load saved filters
+    loadFilterState();
 
     // Get user location
     if (navigator.geolocation) {
@@ -843,6 +1434,7 @@
               vel: state[9],
               track: state[10],
               vRate: state[11],
+              sensors: state[12],
               geoAlt: state[13],
               squawk: state[14],
               spi: state[15],
@@ -850,20 +1442,31 @@
               category: state[17],
             }));
 
-          statusTitle.textContent = `Found ${planes.length} aircraft`;
           const locationDisplay = cityName || `${userLocation.lat.toFixed(4)}°, ${userLocation.lon.toFixed(4)}°`;
           statusDesc.textContent = `Last updated: ${lastUpdate.toLocaleTimeString()} • Near ${locationDisplay}`;
 
-          if (planes.length === 0) {
+          // Store all planes, update position history for ALL, then filter for display
+          allPlanes = planes;
+          updatePositionHistory(allPlanes);
+
+          const filtered = applyFilters(allPlanes);
+          statusTitle.textContent = `Found ${allPlanes.length} aircraft`;
+          updateFilterCount(filtered.length, allPlanes.length);
+
+          if (filtered.length === 0) {
             emptyState.style.display = 'block';
           } else {
-            planes.forEach(plane => {
+            filtered.forEach(plane => {
               const card = createPlaneCard(plane);
               grid.appendChild(card);
-              enrichCard(plane.icao24); // async — populates photo, registration, type, operator
+              enrichCard(plane.icao24);
             });
-            updateMapMarkers(planes);
+            updateMapMarkers(filtered);
+            updateTrails(filtered);
           }
+
+          // Log ALL planes to history (not just filtered)
+          logSightings(allPlanes);
         } else {
           statusTitle.textContent = 'Scanning airspace...';
           const locationDisplay = cityName || `${userLocation.lat.toFixed(4)}°, ${userLocation.lon.toFixed(4)}°`;
@@ -1098,6 +1701,10 @@
             ${plane.spi ? `<div>
               <div class="stat-label">SPI</div>
               <div class="stat-value" style="color:#dc2626;font-weight:700;">ACTIVE</div>
+            </div>` : ''}
+            ${plane.sensors && plane.sensors.length ? `<div>
+              <div class="stat-label">Receivers</div>
+              <div class="stat-value">${plane.sensors.length}</div>
             </div>` : ''}
           </div>
           ${plane.lat && plane.lon ? `

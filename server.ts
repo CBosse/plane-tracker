@@ -15,6 +15,33 @@ const mode: Mode =
  * Add any API routes here.
  */
 
+import { upsertSightings, getHistory, getStats } from "./backend-lib/sightings-db";
+
+app.post("/api/sightings", async (c) => {
+  try {
+    const body = await c.req.json();
+    if (!body.planes || !Array.isArray(body.planes)) {
+      return c.json({ error: "planes array required" }, 400);
+    }
+    upsertSightings(body.planes);
+    return c.json({ ok: true });
+  } catch (e) {
+    return c.json({ error: "Failed to log sightings" }, 500);
+  }
+});
+
+app.get("/api/history", (c) => {
+  const limit = Math.min(parseInt(c.req.query("limit") || "50", 10), 200);
+  const offset = parseInt(c.req.query("offset") || "0", 10);
+  const history = getHistory(limit, offset);
+  return c.json({ history });
+});
+
+app.get("/api/stats", (c) => {
+  const stats = getStats();
+  return c.json(stats);
+});
+
 if (mode === "production") {
   configureProduction(app);
 } else {

@@ -1990,7 +1990,6 @@
       errorCard.style.display = 'none';
       rateLimitCard.style.display = 'none';
       emptyState.style.display = 'none';
-      grid.innerHTML = '';
       lastFetchTime = Date.now();
 
       let rateLimited = false;
@@ -2106,13 +2105,18 @@
 
     function handleRateLimit() {
       const btn = document.getElementById('refreshBtn');
+      const icon = document.getElementById('refreshIcon');
+      const refreshText = document.getElementById('refreshText');
       const statusTitle = document.getElementById('statusTitle');
       const statusDesc = document.getElementById('statusDesc');
       const rateLimitCard = document.getElementById('rateLimitCard');
       const rateLimitMsg = document.getElementById('rateLimitMsg');
       const retryTimer = document.getElementById('retryTimer');
       const errorCard = document.getElementById('errorCard');
-      const grid = document.getElementById('planeGrid');
+
+      // Stop the loading spinner immediately
+      icon.classList.remove('loading');
+      refreshText.textContent = 'Refresh';
 
       // Calculate backoff time (exponential: 30s, 60s, 120s, 240s, max 300s)
       backoffCount++;
@@ -2148,6 +2152,7 @@
       rateLimitTimeout = setTimeout(() => {
         clearInterval(rateLimitTimer);
         rateLimitCard.style.display = 'none';
+        rateLimitEndTime = null;
         btn.disabled = false;
         fetchPlanes(false);
       }, backoffTime * 1000);

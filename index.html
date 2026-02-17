@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,108 @@
   <title>Plane Tracker</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
+    :root {
+      /* Page */
+      --bg-gradient-1: #0ea5e9;
+      --bg-gradient-2: #0284c7;
+      --bg-gradient-3: #0369a1;
+      /* Surfaces */
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --glass-bg: rgba(255, 255, 255, 0.15);
+      --inset-bg: #f8fafc;
+      --code-badge-bg: #f1f5f9;
+      --blue-badge-bg: #e0f2fe;
+      --photo-credit-bg: rgba(0, 0, 0, 0.04);
+      --route-bg-1: #f0f9ff;
+      --route-bg-2: #e0f2fe;
+      /* Text */
+      --text-primary: #1e293b;
+      --text-heading: #0c4a6e;
+      --text-label: #64748b;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --text-type: #334155;
+      --text-on-brand: white;
+      --text-on-glass: rgba(255, 255, 255, 0.9);
+      --text-on-glass-dim: rgba(255, 255, 255, 0.8);
+      /* Borders */
+      --glass-border: rgba(255, 255, 255, 0.3);
+      --card-border: rgba(255, 255, 255, 0.5);
+      --route-border: #bae6fd;
+      --divider: #e2e8f0;
+      /* Tooltip */
+      --tooltip-bg: #0c4a6e;
+      --tooltip-text: #fff;
+      /* Buttons */
+      --btn-bg: white;
+      --btn-text: #0ea5e9;
+      --btn-active-bg: #0ea5e9;
+      --btn-active-text: white;
+      --tab-active-bg: rgba(255, 255, 255, 0.95);
+      --tab-active-text: #0c4a6e;
+      /* Filter inputs */
+      --input-bg: rgba(255, 255, 255, 0.9);
+      --input-bg-solid: rgba(255, 255, 255, 0.95);
+      --input-text: #1e293b;
+      /* Shadows */
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+      --shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.15);
+      /* Registration badge */
+      --reg-text: #0c4a6e;
+      --flag-text: #0369a1;
+    }
+
+    [data-theme="dark"] {
+      --bg-gradient-1: #0f172a;
+      --bg-gradient-2: #1e293b;
+      --bg-gradient-3: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.95);
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --inset-bg: #1e293b;
+      --code-badge-bg: #334155;
+      --blue-badge-bg: #1e3a5f;
+      --photo-credit-bg: rgba(0, 0, 0, 0.3);
+      --route-bg-1: #1e293b;
+      --route-bg-2: #1e3a5f;
+      --text-primary: #e2e8f0;
+      --text-heading: #7dd3fc;
+      --text-label: #94a3b8;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --text-type: #cbd5e1;
+      --text-on-brand: #e2e8f0;
+      --text-on-glass: rgba(255, 255, 255, 0.85);
+      --text-on-glass-dim: rgba(255, 255, 255, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --route-border: #334155;
+      --divider: #334155;
+      --tooltip-bg: #e2e8f0;
+      --tooltip-text: #0f172a;
+      --btn-bg: #334155;
+      --btn-text: #7dd3fc;
+      --btn-active-bg: #0ea5e9;
+      --btn-active-text: white;
+      --tab-active-bg: rgba(30, 41, 59, 0.95);
+      --tab-active-text: #7dd3fc;
+      --input-bg: rgba(30, 41, 59, 0.9);
+      --input-bg-solid: rgba(30, 41, 59, 0.95);
+      --input-text: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+      --shadow-btn: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --reg-text: #7dd3fc;
+      --flag-text: #7dd3fc;
+    }
+
+    /* Leaflet map dark mode */
+    [data-theme="dark"] #map .leaflet-tile-pane {
+      filter: brightness(0.7) invert(1) contrast(1.1) hue-rotate(200deg);
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -14,10 +116,10 @@
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+      background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 50%, var(--bg-gradient-3) 100%);
       min-height: 100vh;
       padding: 20px;
-      color: #1e293b;
+      color: var(--text-primary);
     }
     .container {
       max-width: 1200px;
@@ -39,25 +141,25 @@
     .icon {
       width: 56px;
       height: 56px;
-      background: white;
+      background: var(--btn-bg);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #0ea5e9;
+      color: var(--btn-text);
       font-weight: bold;
       font-size: 24px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      box-shadow: var(--shadow-md);
     }
     h1 {
       font-size: 32px;
       font-weight: 700;
-      color: white;
+      color: var(--text-on-brand);
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .subtitle {
       font-size: 15px;
-      color: rgba(255, 255, 255, 0.9);
+      color: var(--text-on-glass);
       margin-top: 4px;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
@@ -74,24 +176,24 @@
     }
     .location-input {
       padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--input-bg-solid);
       border: none;
       border-radius: 10px;
       font-size: 14px;
       font-weight: 500;
       font-family: inherit;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: var(--shadow-btn);
       outline: none;
       width: 210px;
-      color: #1e293b;
+      color: var(--input-text);
     }
     .location-input::placeholder {
-      color: #94a3b8;
+      color: var(--text-muted);
       font-weight: 400;
     }
     button {
       padding: 12px 24px;
-      background: white;
+      background: var(--btn-bg);
       border: none;
       border-radius: 10px;
       cursor: pointer;
@@ -101,8 +203,8 @@
       align-items: center;
       gap: 8px;
       transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      color: #0ea5e9;
+      box-shadow: var(--shadow-btn);
+      color: var(--btn-text);
     }
     button:hover:not(:disabled) {
       transform: translateY(-2px);
@@ -117,11 +219,11 @@
       transform: none;
     }
     button.active {
-      background: #0ea5e9;
-      color: white;
+      background: var(--btn-active-bg);
+      color: var(--btn-active-text);
     }
     .filter-bar {
-      background: rgba(255, 255, 255, 0.15);
+      background: var(--glass-bg);
       backdrop-filter: blur(12px);
       border-radius: 16px;
       padding: 16px 20px;
@@ -130,7 +232,7 @@
       flex-wrap: wrap;
       gap: 12px;
       align-items: flex-end;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 1px solid var(--glass-border);
     }
     .filter-group {
       display: flex;
@@ -142,16 +244,16 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: rgba(255, 255, 255, 0.9);
+      color: var(--text-on-glass);
     }
     .filter-group input, .filter-group select {
       padding: 8px 10px;
       border: none;
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.9);
+      background: var(--input-bg);
       font-size: 13px;
       font-family: inherit;
-      color: #1e293b;
+      color: var(--input-text);
       outline: none;
       width: 110px;
     }
@@ -161,14 +263,14 @@
     .filter-count {
       font-size: 13px;
       font-weight: 600;
-      color: white;
+      color: var(--text-on-brand);
       padding: 8px 0;
       white-space: nowrap;
     }
     .filter-clear-btn {
       padding: 8px 14px;
       font-size: 12px;
-      background: rgba(255, 255, 255, 0.9);
+      background: var(--input-bg);
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -177,16 +279,16 @@
       box-shadow: none;
     }
     .filter-clear-btn:hover {
-      background: white;
+      background: var(--btn-bg);
     }
     .tab-bar {
       display: flex;
       gap: 0;
       margin-bottom: 24px;
-      background: rgba(255, 255, 255, 0.15);
+      background: var(--glass-bg);
       border-radius: 12px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 1px solid var(--glass-border);
     }
     .tab-btn {
       flex: 1;
@@ -197,7 +299,7 @@
       cursor: pointer;
       font-size: 15px;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--text-on-glass-dim);
       box-shadow: none;
       transition: all 0.2s;
     }
@@ -207,8 +309,8 @@
       box-shadow: none;
     }
     .tab-btn.tab-active {
-      background: rgba(255, 255, 255, 0.95);
-      color: #0c4a6e;
+      background: var(--tab-active-bg);
+      color: var(--tab-active-text);
       box-shadow: none;
     }
     .history-panel {
@@ -221,27 +323,27 @@
       margin-bottom: 24px;
     }
     .history-stat-card {
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--card-bg);
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-sm);
     }
     .history-stat-label {
       font-size: 12px;
       font-weight: 600;
-      color: #64748b;
+      color: var(--text-label);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .history-stat-value {
       font-size: 28px;
       font-weight: 700;
-      color: #0c4a6e;
+      color: var(--text-heading);
       margin-top: 4px;
     }
     .history-stat-sub {
       font-size: 13px;
-      color: #475569;
+      color: var(--text-secondary);
       margin-top: 4px;
     }
     .history-list {
@@ -250,10 +352,10 @@
       gap: 12px;
     }
     .history-item {
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--card-bg);
       border-radius: 12px;
       padding: 16px 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-sm);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -268,20 +370,20 @@
     .history-item-callsign {
       font-size: 16px;
       font-weight: 700;
-      color: #0c4a6e;
+      color: var(--text-heading);
     }
     .history-item-icao {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 12px;
-      color: #64748b;
-      background: #f1f5f9;
+      color: var(--text-label);
+      background: var(--code-badge-bg);
       padding: 2px 6px;
       border-radius: 4px;
       display: inline-block;
     }
     .history-item-details {
       font-size: 13px;
-      color: #475569;
+      color: var(--text-secondary);
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
@@ -298,22 +400,22 @@
       to { transform: rotate(360deg); }
     }
     .status-card {
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--card-bg);
       backdrop-filter: blur(12px);
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 24px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--shadow-lg);
     }
     .status-title {
       font-size: 22px;
       font-weight: 700;
-      color: #0c4a6e;
+      color: var(--text-heading);
       margin-bottom: 4px;
     }
     .status-desc {
       font-size: 14px;
-      color: #64748b;
+      color: var(--text-label);
     }
     .rate-limit-card {
       background: #fef3c7;
@@ -362,13 +464,13 @@
       font-size: 14px;
     }
     .empty-state {
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--card-bg);
       border-radius: 16px;
       padding: 80px 20px;
       text-align: center;
       margin-bottom: 24px;
-      color: #64748b;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      color: var(--text-label);
+      box-shadow: var(--shadow-sm);
     }
     .empty-icon {
       font-size: 64px;
@@ -384,7 +486,7 @@
       border-radius: 16px;
       overflow: hidden;
       margin-bottom: 24px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      box-shadow: var(--shadow-lg);
       height: 460px;
     }
     #map {
@@ -396,14 +498,14 @@
       border: none !important;
     }
     .plane-card {
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--card-bg);
       backdrop-filter: blur(12px);
       border-radius: 16px;
       padding: 0;
       overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-md);
       transition: all 0.3s ease;
-      border: 1px solid rgba(255, 255, 255, 0.5);
+      border: 1px solid var(--card-border);
     }
     .plane-card:hover {
       transform: translateY(-4px);
@@ -417,10 +519,10 @@
     }
     .plane-photo-credit {
       font-size: 10px;
-      color: #94a3b8;
+      color: var(--text-muted);
       text-align: right;
       padding: 3px 10px;
-      background: rgba(0, 0, 0, 0.04);
+      background: var(--photo-credit-bg);
     }
     .plane-photo-credit a {
       color: inherit;
@@ -446,7 +548,7 @@
     }
     /* ── Aircraft details section ── */
     .plane-details {
-      background: #f8fafc;
+      background: var(--inset-bg);
       border-radius: 10px;
       padding: 10px 12px;
       margin-bottom: 14px;
@@ -462,14 +564,14 @@
     }
     .plane-enrich-loading {
       font-size: 11px;
-      color: #94a3b8;
+      color: var(--text-muted);
       font-style: italic;
     }
     .plane-registration {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 13px;
-      color: #0c4a6e;
-      background: #e0f2fe;
+      color: var(--reg-text);
+      background: var(--blue-badge-bg);
       padding: 2px 8px;
       border-radius: 4px;
       display: inline-block;
@@ -477,19 +579,19 @@
     }
     .plane-type {
       font-size: 13px;
-      color: #334155;
+      color: var(--text-type);
       font-weight: 600;
     }
     .plane-operator {
       font-size: 12px;
-      color: #475569;
+      color: var(--text-secondary);
       font-weight: 500;
     }
     .plane-icao-type {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 11px;
-      color: #475569;
-      background: #f1f5f9;
+      color: var(--text-secondary);
+      background: var(--code-badge-bg);
       padding: 2px 6px;
       border-radius: 4px;
       display: inline-block;
@@ -498,8 +600,8 @@
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 11px;
       font-weight: 700;
-      color: #0369a1;
-      background: #e0f2fe;
+      color: var(--flag-text);
+      background: var(--blue-badge-bg);
       padding: 2px 6px;
       border-radius: 4px;
       display: inline-block;
@@ -516,8 +618,8 @@
       bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%);
-      background: #0c4a6e;
-      color: #fff;
+      background: var(--tooltip-bg);
+      color: var(--tooltip-text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 12px;
       font-weight: 500;
@@ -538,7 +640,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 5px solid transparent;
-      border-top-color: #0c4a6e;
+      border-top-color: var(--tooltip-bg);
     }
     .tip:hover .tiptext {
       visibility: visible;
@@ -546,9 +648,9 @@
     }
     .plane-route {
       padding: 12px;
-      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      background: linear-gradient(135deg, var(--route-bg-1), var(--route-bg-2));
       border-radius: 10px;
-      border: 1px solid #bae6fd;
+      border: 1px solid var(--route-border);
       margin-bottom: 14px;
     }
     .plane-route-label {
@@ -556,7 +658,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #64748b;
+      color: var(--text-label);
       margin-bottom: 6px;
     }
     .plane-route-codes {
@@ -565,7 +667,7 @@
       gap: 8px;
       font-size: 20px;
       font-weight: 700;
-      color: #0c4a6e;
+      color: var(--text-heading);
       letter-spacing: 1px;
     }
     .plane-route-arrow {
@@ -577,11 +679,11 @@
       align-items: center;
       gap: 8px;
       font-size: 12px;
-      color: #475569;
+      color: var(--text-secondary);
       margin-top: 4px;
     }
     .plane-route-names .route-arrow-sm {
-      color: #94a3b8;
+      color: var(--text-muted);
       font-size: 10px;
     }
     .squawk-badge {
@@ -591,8 +693,8 @@
       letter-spacing: 1px;
       padding: 2px 7px;
       border-radius: 4px;
-      background: #f1f5f9;
-      color: #64748b;
+      background: var(--code-badge-bg);
+      color: var(--text-label);
       display: inline-block;
     }
     .squawk-tip {
@@ -606,8 +708,8 @@
       bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%);
-      background: #0c4a6e;
-      color: #fff;
+      background: var(--tooltip-bg);
+      color: var(--tooltip-text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       font-size: 12px;
       font-weight: 500;
@@ -628,7 +730,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 6px solid transparent;
-      border-top-color: #0c4a6e;
+      border-top-color: var(--tooltip-bg);
     }
     .squawk-tip:hover .squawk-tooltip {
       visibility: visible;
@@ -652,14 +754,14 @@
     .plane-callsign {
       font-size: 20px;
       font-weight: 700;
-      color: #0c4a6e;
+      color: var(--text-heading);
       letter-spacing: 0.5px;
     }
     .plane-icao {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 12px;
-      color: #64748b;
-      background: #f1f5f9;
+      color: var(--text-label);
+      background: var(--code-badge-bg);
       padding: 2px 6px;
       border-radius: 4px;
       display: inline-block;
@@ -681,7 +783,7 @@
       font-size: 14px;
     }
     .stat-label {
-      color: #64748b;
+      color: var(--text-label);
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -689,7 +791,7 @@
     }
     .stat-value {
       font-weight: 600;
-      color: #0c4a6e;
+      color: var(--text-heading);
       font-size: 15px;
     }
     .climb { 
@@ -703,11 +805,11 @@
     .plane-position {
       margin-top: 14px;
       padding-top: 14px;
-      border-top: 2px solid #e2e8f0;
+      border-top: 2px solid var(--divider);
       font-size: 12px;
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
-      color: #475569;
-      background: #f8fafc;
+      color: var(--text-secondary);
+      background: var(--inset-bg);
       padding: 10px;
       border-radius: 8px;
     }
@@ -715,13 +817,24 @@
       margin-top: 60px;
       text-align: center;
       font-size: 13px;
-      color: rgba(255, 255, 255, 0.8);
+      color: var(--text-on-glass-dim);
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
     footer a {
-      color: white;
+      color: var(--text-on-brand);
       text-decoration: underline;
       font-weight: 600;
+    }
+    /* Theme toggle button */
+    .theme-toggle {
+      padding: 10px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      line-height: 1;
     }
   </style>
 </head>
@@ -752,6 +865,9 @@
         <button onclick="toggleTrails()" id="trailsBtn">
           <span>〰️</span>
           <span>Trails</span>
+        </button>
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle dark mode">
+          <span id="themeIcon">🌙</span>
         </button>
         <button onclick="manualRefresh()" id="refreshBtn">
           <span id="refreshIcon">↻</span>
@@ -850,6 +966,38 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // ── Theme init (runs immediately before render) ─────────────────────
+    (function() {
+      const saved = localStorage.getItem('planeTrackerTheme');
+      const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+
+    function applyThemeIcon() {
+      const theme = document.documentElement.getAttribute('data-theme');
+      const icon = document.getElementById('themeIcon');
+      if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('planeTrackerTheme', next);
+      applyThemeIcon();
+    }
+
+    // Update icon once DOM is ready
+    document.addEventListener('DOMContentLoaded', applyThemeIcon);
+
+    // Listen for system theme changes (only if no saved preference)
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('planeTrackerTheme')) {
+        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+        applyThemeIcon();
+      }
+    });
+
     let userLocation = { lat: 39.8283, lon: -98.5795 }; // Default: central US
     let cityName = null;
     let refreshInterval = null;
@@ -997,7 +1145,7 @@
 
           enrichEl.innerHTML = rows.join('');
         } else {
-          enrichEl.innerHTML = '<div class="plane-details-row"><span class="plane-operator" style="color:#94a3b8;">No registration data available</span></div>';
+          enrichEl.innerHTML = '<div class="plane-details-row"><span class="plane-operator" style="color:var(--text-muted);">No registration data available</span></div>';
         }
       }
 
@@ -1329,7 +1477,7 @@
             <div class="history-item-main">
               <span class="history-item-callsign">${escapeHtml((s.callsign || '').trim() || 'Unknown')}</span>
               <span class="history-item-icao">${escapeHtml(s.icao24)}</span>
-              <span style="font-size:12px;color:#64748b;">${escapeHtml(s.origin_country || '')}</span>
+              <span style="font-size:12px;color:var(--text-label);">${escapeHtml(s.origin_country || '')}</span>
             </div>
             <div class="history-item-details">
               <span>Alt: ${altRange}</span>

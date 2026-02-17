@@ -484,6 +484,46 @@
       border-radius: 4px;
       display: inline-block;
     }
+    .plane-route {
+      margin-top: 14px;
+      padding: 12px;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border-radius: 10px;
+      border: 1px solid #bae6fd;
+    }
+    .plane-route-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .plane-route-codes {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #0c4a6e;
+      letter-spacing: 1px;
+    }
+    .plane-route-arrow {
+      color: #0ea5e9;
+      font-size: 16px;
+    }
+    .plane-route-names {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #475569;
+      margin-top: 4px;
+    }
+    .plane-route-names .route-arrow-sm {
+      color: #94a3b8;
+      font-size: 10px;
+    }
     .squawk-badge {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 11px;
@@ -789,6 +829,7 @@
 
     const enrichmentCache = new Map(); // icao24 -> info object or null
     const photoCache = new Map();      // icao24 -> photo object or null
+    const routeCache = new Map();      // callsign -> route object or null
 
     async function fetchAircraftInfo(icao24) {
       if (enrichmentCache.has(icao24)) return enrichmentCache.get(icao24);
@@ -839,10 +880,40 @@
       return null;
     }
 
-    async function enrichCard(icao24) {
-      const [info, photo] = await Promise.all([
+    async function fetchFlightRoute(callsign) {
+      if (!callsign || !callsign.trim()) return null;
+      const cs = callsign.trim();
+      if (routeCache.has(cs)) return routeCache.get(cs);
+      try {
+        const res = await fetch(`https://api.adsbdb.com/v0/callsign/${cs}`);
+        if (res.ok) {
+          const data = await res.json();
+          const fr = data.response?.flightroute;
+          if (fr && fr.origin && fr.destination) {
+            const route = {
+              originIata: fr.origin.iata_code || null,
+              originIcao: fr.origin.icao_code || null,
+              originName: fr.origin.name || null,
+              originCity: fr.origin.municipality || null,
+              destIata: fr.destination.iata_code || null,
+              destIcao: fr.destination.icao_code || null,
+              destName: fr.destination.name || null,
+              destCity: fr.destination.municipality || null,
+            };
+            routeCache.set(cs, route);
+            return route;
+          }
+        }
+      } catch (e) {}
+      routeCache.set(cs, null);
+      return null;
+    }
+
+    async function enrichCard(icao24, callsign) {
+      const [info, photo, route] = await Promise.all([
         fetchAircraftInfo(icao24),
         fetchAircraftPhoto(icao24),
+        fetchFlightRoute(callsign),
       ]);
 
       const enrichEl = document.getElementById(`enrich-${icao24}`);
@@ -876,6 +947,28 @@
             : (photo?.url ? '' : `<div class="plane-photo-credit">via airport-data.com</div>`);
           photoEl.innerHTML = `<img src="${escapeHtml(photoUrl)}" alt="Aircraft photo" loading="lazy" />${creditHtml}`;
         }
+      }
+
+      const routeEl = document.getElementById(`route-${icao24}`);
+      if (routeEl && route) {
+        routeEl.style.display = '';
+        const origCode = route.originIata || route.originIcao || '???';
+        const destCode = route.destIata || route.destIcao || '???';
+        const origLabel = route.originCity || route.originName || '';
+        const destLabel = route.destCity || route.destName || '';
+        routeEl.innerHTML = `
+          <div class="plane-route-label">Route</div>
+          <div class="plane-route-codes">
+            <span>${escapeHtml(origCode)}</span>
+            <span class="plane-route-arrow">→</span>
+            <span>${escapeHtml(destCode)}</span>
+          </div>
+          <div class="plane-route-names">
+            <span>${escapeHtml(origLabel)}</span>
+            <span class="route-arrow-sm">→</span>
+            <span>${escapeHtml(destLabel)}</span>
+          </div>
+        `;
       }
     }
 
@@ -1053,7 +1146,7 @@
       filtered.forEach(plane => {
         const card = createPlaneCard(plane);
         grid.appendChild(card);
-        enrichCard(plane.icao24);
+        enrichCard(plane.icao24, plane.callsign);
       });
 
       updateMapMarkers(filtered);
@@ -1459,7 +1552,7 @@
             filtered.forEach(plane => {
               const card = createPlaneCard(plane);
               grid.appendChild(card);
-              enrichCard(plane.icao24);
+              enrichCard(plane.icao24, plane.callsign);
             });
             updateMapMarkers(filtered);
             updateTrails(filtered);
@@ -1657,6 +1750,7 @@
               ${squawkDisplay}
             </div>
           </div>
+          <div class="plane-route" id="route-${plane.icao24}" style="display:none;"></div>
           <div class="plane-stats">
             <div>
               <div class="stat-label">Status</div>

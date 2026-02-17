@@ -429,11 +429,36 @@
     .plane-body {
       padding: 16px 20px 20px;
     }
-    .plane-enrich {
+    /* ── Card identity row ── */
+    .plane-identity {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .plane-identity-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    /* ── Aircraft details section ── */
+    .plane-details {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      margin-top: 6px;
+      gap: 6px;
+    }
+    .plane-details-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .plane-enrich-loading {
       font-size: 11px;
@@ -460,11 +485,6 @@
       color: #475569;
       font-weight: 500;
     }
-    .plane-manufacturer {
-      font-size: 12px;
-      color: #334155;
-      font-weight: 500;
-    }
     .plane-icao-type {
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 11px;
@@ -484,12 +504,52 @@
       border-radius: 4px;
       display: inline-block;
     }
+    /* ── Generic tooltip ── */
+    .tip {
+      position: relative;
+      cursor: help;
+    }
+    .tip .tiptext {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0c4a6e;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: 1.4;
+      padding: 6px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.15s, visibility 0.15s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .tip .tiptext::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #0c4a6e;
+    }
+    .tip:hover .tiptext {
+      visibility: visible;
+      opacity: 1;
+    }
     .plane-route {
-      margin-top: 14px;
       padding: 12px;
       background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
       border-radius: 10px;
       border: 1px solid #bae6fd;
+      margin-bottom: 14px;
     }
     .plane-route-label {
       font-size: 11px;
@@ -589,12 +649,6 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
     }
-    .plane-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 16px;
-    }
     .plane-callsign {
       font-size: 20px;
       font-weight: 700;
@@ -605,7 +659,6 @@
       font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
       font-size: 12px;
       color: #64748b;
-      margin-top: 4px;
       background: #f1f5f9;
       padding: 2px 6px;
       border-radius: 4px;
@@ -614,11 +667,12 @@
     .plane-badge {
       background: linear-gradient(135deg, #0ea5e9, #0284c7);
       color: white;
-      padding: 6px 12px;
+      padding: 4px 10px;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+      white-space: nowrap;
     }
     .plane-stats {
       display: grid;
@@ -919,22 +973,31 @@
       const enrichEl = document.getElementById(`enrich-${icao24}`);
       if (enrichEl) {
         if (info) {
-          let html = '';
-          if (info.registration) html += `<span class="plane-registration">${escapeHtml(info.registration)}</span>`;
+          let rows = [];
+
+          // Row 1: Registration + ICAO type
+          const regParts = [];
+          if (info.registration) regParts.push(`<span class="tip plane-registration">${escapeHtml(info.registration)}<span class="tiptext">Tail number — aircraft registration</span></span>`);
+          if (info.icaoType) regParts.push(`<span class="tip plane-icao-type">${escapeHtml(info.icaoType)}<span class="tiptext">ICAO type designator code</span></span>`);
+          if (regParts.length) rows.push(`<div class="plane-details-row">${regParts.join(' ')}</div>`);
+
+          // Row 2: Manufacturer + type
           if (info.manufacturer || info.type) {
             const mfr = info.manufacturer ? escapeHtml(info.manufacturer) : '';
             const type = info.type ? escapeHtml(info.type) : '';
             const sep = mfr && type ? ' ' : '';
-            html += `<span class="plane-type">${mfr}${sep}${type}</span>`;
+            rows.push(`<div class="plane-details-row"><span class="tip plane-type">${mfr}${sep}${type}<span class="tiptext">Aircraft manufacturer and model</span></span></div>`);
           }
-          if (info.icaoType) html += `<span class="plane-icao-type">${escapeHtml(info.icaoType)}</span>`;
+
+          // Row 3: Operator + flag code
           if (info.operator) {
-            const flag = info.flagCode ? `<span class="plane-flag-code">${escapeHtml(info.flagCode)}</span> ` : '';
-            html += `<span class="plane-operator">${flag}${escapeHtml(info.operator)}</span>`;
+            const flag = info.flagCode ? `<span class="tip plane-flag-code">${escapeHtml(info.flagCode)}<span class="tiptext">Airline ICAO code</span></span> ` : '';
+            rows.push(`<div class="plane-details-row"><span class="tip plane-operator">${flag}${escapeHtml(info.operator)}<span class="tiptext">Registered owner or operator</span></span></div>`);
           }
-          enrichEl.innerHTML = html;
+
+          enrichEl.innerHTML = rows.join('');
         } else {
-          enrichEl.innerHTML = '<span class="plane-operator">No registration data available</span>';
+          enrichEl.innerHTML = '<div class="plane-details-row"><span class="plane-operator" style="color:#94a3b8;">No registration data available</span></div>';
         }
       }
 
@@ -956,12 +1019,14 @@
         const destCode = route.destIata || route.destIcao || '???';
         const origLabel = route.originCity || route.originName || '';
         const destLabel = route.destCity || route.destName || '';
+        const origFull = route.originName || '';
+        const destFull = route.destName || '';
         routeEl.innerHTML = `
           <div class="plane-route-label">Route</div>
           <div class="plane-route-codes">
-            <span>${escapeHtml(origCode)}</span>
+            <span class="tip">${escapeHtml(origCode)}<span class="tiptext">${escapeHtml(origFull || 'Origin airport')}</span></span>
             <span class="plane-route-arrow">→</span>
-            <span>${escapeHtml(destCode)}</span>
+            <span class="tip">${escapeHtml(destCode)}<span class="tiptext">${escapeHtml(destFull || 'Destination airport')}</span></span>
           </div>
           <div class="plane-route-names">
             <span>${escapeHtml(origLabel)}</span>
@@ -1737,73 +1802,91 @@
       card.innerHTML = `
         <div class="plane-photo-wrap" id="photo-${plane.icao24}"></div>
         <div class="plane-body">
-          <div class="plane-header">
-            <div>
-              <div class="plane-callsign">${escapeHtml((plane.callsign || '').trim() || 'Unknown')}</div>
-              <div class="plane-icao">${escapeHtml(plane.icao24)}</div>
-              <div class="plane-enrich" id="enrich-${plane.icao24}">
-                <span class="plane-enrich-loading">Loading aircraft info...</span>
-              </div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <span class="plane-badge">${escapeHtml(plane.origin_country)}</span>
+          <!-- Identity row: callsign + icao + country -->
+          <div class="plane-identity">
+            <div class="plane-identity-left">
+              <span class="tip plane-callsign">${escapeHtml((plane.callsign || '').trim() || 'Unknown')}<span class="tiptext">Callsign — radio identifier assigned by ATC or airline</span></span>
+              <span class="tip plane-icao">${escapeHtml(plane.icao24)}<span class="tiptext">ICAO 24-bit hex address — unique transponder ID</span></span>
               ${squawkDisplay}
             </div>
+            <span class="tip plane-badge">${escapeHtml(plane.origin_country)}<span class="tiptext">Country of aircraft registration</span></span>
           </div>
+
+          <!-- Aircraft details (populated async) -->
+          <div class="plane-details" id="enrich-${plane.icao24}">
+            <span class="plane-enrich-loading">Loading aircraft info…</span>
+          </div>
+
+          <!-- Route (populated async, hidden until data arrives) -->
           <div class="plane-route" id="route-${plane.icao24}" style="display:none;"></div>
+
+          <!-- Flight data grid -->
           <div class="plane-stats">
-            <div>
+            <div class="tip">
               <div class="stat-label">Status</div>
               <div class="stat-value">${groundStatus}</div>
+              <span class="tiptext">Whether the aircraft is airborne or on the ground</span>
             </div>
-            <div>
+            <div class="tip">
               <div class="stat-label">Squawk</div>
               <div class="stat-value" style="font-family:'SF Mono','Monaco','Cascadia Code',monospace;">${plane.squawk ? `<span class="squawk-tip">${escapeHtml(plane.squawk)}<span class="squawk-tooltip">${escapeHtml(squawkMeaning)}</span></span>` : '—'}</div>
+              <span class="tiptext">Transponder code assigned by ATC</span>
             </div>
-            <div>
+            <div class="tip">
               <div class="stat-label">Altitude (baro)</div>
               <div class="stat-value">${alt}</div>
+              <span class="tiptext">Barometric altitude — based on air pressure</span>
             </div>
-            <div>
+            <div class="tip">
               <div class="stat-label">Altitude (geo)</div>
               <div class="stat-value">${geoAlt || 'N/A'}</div>
+              <span class="tiptext">Geometric altitude — GPS-based height above sea level</span>
             </div>
-            <div>
+            <div class="tip">
               <div class="stat-label">Ground Speed</div>
               <div class="stat-value">${speed}</div>
+              <span class="tiptext">Speed over the ground in nautical knots</span>
             </div>
-            <div>
+            <div class="tip">
               <div class="stat-label">Heading</div>
               <div class="stat-value">${heading}</div>
+              <span class="tiptext">True track — direction of travel relative to north</span>
             </div>
-            <div>
+            <div class="tip">
               <div class="stat-label">Vertical</div>
               <div class="stat-value ${vClass}">${vStatus}${vRateStr}</div>
+              <span class="tiptext">Vertical rate — climbing, descending, or level flight</span>
             </div>
-            ${sourceLabel ? `<div>
+            ${sourceLabel ? `<div class="tip">
               <div class="stat-label">Source</div>
               <div class="stat-value">${sourceLabel}</div>
+              <span class="tiptext">Position data source — how this aircraft is being tracked</span>
             </div>` : ''}
-            ${categoryLabel ? `<div>
+            ${categoryLabel ? `<div class="tip">
               <div class="stat-label">Category</div>
               <div class="stat-value" style="font-size:13px;">${categoryLabel}</div>
+              <span class="tiptext">Aircraft weight/type category from ADS-B</span>
             </div>` : ''}
-            ${lastSeen ? `<div>
+            ${lastSeen ? `<div class="tip">
               <div class="stat-label">Last Contact</div>
               <div class="stat-value">${lastSeen}</div>
+              <span class="tiptext">Time since last signal received from this aircraft</span>
             </div>` : ''}
-            ${plane.spi ? `<div>
+            ${plane.spi ? `<div class="tip">
               <div class="stat-label">SPI</div>
               <div class="stat-value" style="color:#dc2626;font-weight:700;">ACTIVE</div>
+              <span class="tiptext">Special Position Indicator — aircraft is squawking ident</span>
             </div>` : ''}
-            ${plane.sensors && plane.sensors.length ? `<div>
+            ${plane.sensors && plane.sensors.length ? `<div class="tip">
               <div class="stat-label">Receivers</div>
               <div class="stat-value">${plane.sensors.length}</div>
+              <span class="tiptext">Number of ground stations tracking this aircraft</span>
             </div>` : ''}
           </div>
           ${plane.lat && plane.lon ? `
-            <div class="plane-position">
+            <div class="tip plane-position">
               Position: ${plane.lat.toFixed(4)}°, ${plane.lon.toFixed(4)}°
+              <span class="tiptext">WGS-84 latitude and longitude coordinates</span>
             </div>
           ` : ''}
         </div>

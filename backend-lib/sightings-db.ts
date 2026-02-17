@@ -124,6 +124,12 @@ export function getHistory(limit = 50, offset = 0): Sighting[] {
     .all(limit, offset) as Sighting[];
 }
 
+export function getAllHistory(): Sighting[] {
+  return db
+    .query("SELECT * FROM sightings ORDER BY last_seen DESC")
+    .all() as Sighting[];
+}
+
 export function getStats() {
   const totalUnique = (
     db.query("SELECT COUNT(DISTINCT icao24) as count FROM sightings").get() as { count: number }

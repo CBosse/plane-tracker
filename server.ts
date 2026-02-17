@@ -15,7 +15,83 @@ const mode: Mode =
  * Add any API routes here.
  */
 
-import { upsertSightings, getHistory, getStats } from "./backend-lib/sightings-db";
+import { upsertSightings, getHistory, getStats, getAllHistory } from "./backend-lib/sightings-db";
+
+// ── OpenSky proxy with in-process cache ──────────────────────────────
+const proxyCache = new Map<string, { data: any; expires: number }>();
+const PROXY_CACHE_TTL = 30_000; // 30 seconds
+
+app.get("/api/planes", async (c) => {
+  const lamin = c.req.query("lamin");
+  const lamax = c.req.query("lamax");
+  const lomin = c.req.query("lomin");
+  const lomax = c.req.query("lomax");
+
+  if (!lamin || !lamax || !lomin || !lomax) {
+    return c.json({ error: "lamin/lamax/lomin/lomax required" }, 400);
+  }
+
+  const cacheKey = `${lamin},${lamax},${lomin},${lomax}`;
+  const cached = proxyCache.get(cacheKey);
+  if (cached && Date.now() < cached.expires) {
+    return c.json(cached.data);
+  }
+
+  const url = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}&extended=1`;
+  const headers: Record<string, string> = {};
+
+  const user = process.env.OPENSKY_USER;
+  const pass = process.env.OPENSKY_PASS;
+  if (user && pass) {
+    headers["Authorization"] = "Basic " + btoa(`${user}:${pass}`);
+  }
+
+  try {
+    const res = await fetch(url, { headers });
+
+    if (res.status === 429) {
+      return c.json({ error: "Rate limited" }, 429);
+    }
+    if (!res.ok) {
+      return c.json({ error: `OpenSky error: ${res.status}` }, res.status as any);
+    }
+
+    const data = await res.json();
+    proxyCache.set(cacheKey, { data, expires: Date.now() + PROXY_CACHE_TTL });
+    return c.json(data);
+  } catch (e) {
+    return c.json({ error: "Failed to reach OpenSky" }, 502);
+  }
+});
+
+// ── CSV export ───────────────────────────────────────────────────────
+app.get("/api/history/csv", (c) => {
+  const rows = getAllHistory();
+  const header = "icao24,callsign,origin_country,first_seen,last_seen,min_alt,max_alt,max_speed,lat,lon";
+  const csvRows = rows.map((r) => {
+    const cs = (r.callsign || "").replace(/"/g, '""');
+    const oc = (r.origin_country || "").replace(/"/g, '""');
+    return [
+      r.icao24,
+      `"${cs}"`,
+      `"${oc}"`,
+      r.first_seen,
+      r.last_seen,
+      r.min_alt ?? "",
+      r.max_alt ?? "",
+      r.max_speed ?? "",
+      r.lat ?? "",
+      r.lon ?? "",
+    ].join(",");
+  });
+  const csv = header + "\n" + csvRows.join("\n");
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv",
+      "Content-Disposition": 'attachment; filename="sightings.csv"',
+    },
+  });
+});
 
 app.post("/api/sightings", async (c) => {
   try {

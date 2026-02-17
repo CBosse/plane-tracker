@@ -836,6 +836,100 @@
       font-size: 20px;
       line-height: 1;
     }
+    /* ── Feature 5: Card highlight animation ── */
+    @keyframes cardHighlight {
+      0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); }
+      50% { box-shadow: 0 0 0 8px rgba(14, 165, 233, 0.2); }
+      100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+    }
+    .plane-card.highlighted {
+      animation: cardHighlight 1s ease-out;
+    }
+    /* ── Feature 6: Emergency squawk alert banner ── */
+    @keyframes emergencyPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    .emergency-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: white;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      animation: emergencyPulse 2s ease-in-out infinite;
+      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .emergency-banner .dismiss-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: none;
+    }
+    .alert-toggle {
+      padding: 10px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .alert-toggle.active {
+      background: #dc2626;
+      color: white;
+    }
+    /* ── Feature 1: Responsive / Mobile ── */
+    @media (max-width: 640px) {
+      body { padding: 10px; }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .header-controls {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .location-input { width: 140px; }
+      .filter-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 12px 14px;
+        gap: 8px;
+        scrollbar-width: thin;
+      }
+      .filter-bar::-webkit-scrollbar { height: 4px; }
+      .filter-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+      .filter-group input, .filter-group select { width: 90px; font-size: 12px; }
+      .filter-group select { width: 100px; }
+      .grid { grid-template-columns: 1fr; }
+      .map-container { height: 280px; }
+      .tab-btn { font-size: 13px; padding: 10px 16px; }
+      .history-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .history-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -865,6 +959,9 @@
         <button onclick="toggleTrails()" id="trailsBtn">
           <span>〰️</span>
           <span>Trails</span>
+        </button>
+        <button class="alert-toggle" onclick="toggleAlerts()" id="alertBtn" title="Toggle emergency alerts">
+          <span id="alertIcon">🚨</span>
         </button>
         <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle dark mode">
           <span id="themeIcon">🌙</span>
@@ -919,6 +1016,21 @@
           <option value="military">Military</option>
         </select>
       </div>
+      <div class="filter-group">
+        <label>Sort By</label>
+        <select id="filterSort" onchange="onFilterChange()" style="width:130px;">
+          <option value="">Default</option>
+          <option value="alt-asc">Alt ↑</option>
+          <option value="alt-desc">Alt ↓</option>
+          <option value="speed-desc">Speed ↓</option>
+          <option value="nearest">Nearest</option>
+          <option value="callsign">Callsign A–Z</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Find Aircraft</label>
+        <input type="text" id="searchAircraft" placeholder="Callsign / ICAO" oninput="onSearchInput()" style="width:130px;">
+      </div>
       <button class="filter-clear-btn" onclick="clearFilters()">Clear</button>
       <span class="filter-count" id="filterCount"></span>
     </div>
@@ -954,6 +1066,12 @@
     </div>
 
     <div class="history-panel" id="historyPanel">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button onclick="exportCsv()">
+          <span>📥</span>
+          <span>Export CSV</span>
+        </button>
+      </div>
       <div class="history-stats" id="historyStats"></div>
       <div class="history-list" id="historyList"></div>
       <button class="history-load-more" id="loadMoreBtn" onclick="loadMoreHistory()" style="display:none;">Load More</button>
@@ -997,6 +1115,17 @@
         applyThemeIcon();
       }
     });
+
+    // ── Feature 4: Haversine distance ────────────────────────────────
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
 
     let userLocation = { lat: 39.8283, lon: -98.5795 }; // Default: central US
     let cityName = null;
@@ -1295,6 +1424,7 @@
           if (s.airborne) document.getElementById('filterAirborne').value = s.airborne;
           if (s.country) document.getElementById('filterCountry').value = s.country;
           if (s.squawk) document.getElementById('filterSquawk').value = s.squawk;
+          if (s.sort) document.getElementById('filterSort').value = s.sort;
         }
       } catch (e) {}
     }
@@ -1308,6 +1438,7 @@
         airborne: document.getElementById('filterAirborne').value,
         country: document.getElementById('filterCountry').value,
         squawk: document.getElementById('filterSquawk').value,
+        sort: document.getElementById('filterSort').value,
       };
       localStorage.setItem('planeTrackerFilters', JSON.stringify(state));
     }
@@ -1343,28 +1474,81 @@
       });
     }
 
-    function renderFilteredPlanes() {
+    // ── Feature 2: Sort planes ──────────────────────────────────────
+    function sortPlanes(planes) {
+      const sortBy = document.getElementById('filterSort').value;
+      if (!sortBy) return planes;
+      const sorted = [...planes];
+      switch (sortBy) {
+        case 'alt-asc':
+          sorted.sort((a, b) => (a.alt ?? -1) - (b.alt ?? -1));
+          break;
+        case 'alt-desc':
+          sorted.sort((a, b) => (b.alt ?? -1) - (a.alt ?? -1));
+          break;
+        case 'speed-desc':
+          sorted.sort((a, b) => (b.vel ?? -1) - (a.vel ?? -1));
+          break;
+        case 'nearest':
+          sorted.sort((a, b) => (a.distKm ?? 9999) - (b.distKm ?? 9999));
+          break;
+        case 'callsign':
+          sorted.sort((a, b) => ((a.callsign || '').trim() || 'ZZZ').localeCompare((b.callsign || '').trim() || 'ZZZ'));
+          break;
+      }
+      return sorted;
+    }
+
+    // ── Feature 9: Lazy-load enrichment via IntersectionObserver ──
+    const enrichedCards = new Set(); // icao24s where enrichment was triggered
+    const enrichObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const el = entry.target;
+        const icao24 = el.dataset.icao24;
+        const callsign = el.dataset.callsign;
+        if (icao24 && !enrichedCards.has(icao24)) {
+          enrichedCards.add(icao24);
+          enrichCard(icao24, callsign || '');
+        }
+        enrichObserver.unobserve(el);
+      }
+    }, { rootMargin: '200px' });
+
+    // ── Shared card renderer ─────────────────────────────────────
+    function renderCards(planes) {
       const grid = document.getElementById('planeGrid');
       const emptyState = document.getElementById('emptyState');
       grid.innerHTML = '';
 
-      const filtered = applyFilters(allPlanes);
-      updateFilterCount(filtered.length, allPlanes.length);
+      const sorted = sortPlanes(planes);
 
-      if (filtered.length === 0 && allPlanes.length > 0) {
+      if (sorted.length === 0) {
         emptyState.style.display = 'block';
       } else {
-        emptyState.style.display = filtered.length === 0 ? 'block' : 'none';
+        emptyState.style.display = 'none';
+        sorted.forEach(plane => {
+          const card = createPlaneCard(plane);
+          card.dataset.icao24 = plane.icao24;
+          card.dataset.callsign = (plane.callsign || '').trim();
+          grid.appendChild(card);
+          // Lazy-load: if already cached, enrich immediately; else observe
+          if (enrichmentCache.has(plane.icao24) && photoCache.has(plane.icao24) && routeCache.has((plane.callsign || '').trim())) {
+            enrichCard(plane.icao24, plane.callsign);
+          } else {
+            enrichObserver.observe(card);
+          }
+        });
       }
 
-      filtered.forEach(plane => {
-        const card = createPlaneCard(plane);
-        grid.appendChild(card);
-        enrichCard(plane.icao24, plane.callsign);
-      });
+      updateMapMarkers(sorted);
+      updateTrails(sorted);
+    }
 
-      updateMapMarkers(filtered);
-      updateTrails(filtered);
+    function renderFilteredPlanes() {
+      const filtered = applyFilters(allPlanes);
+      updateFilterCount(filtered.length, allPlanes.length);
+      renderCards(filtered);
     }
 
     function updateFilterCount(shown, total) {
@@ -1389,6 +1573,8 @@
       document.getElementById('filterAirborne').value = '';
       document.getElementById('filterCountry').value = '';
       document.getElementById('filterSquawk').value = '';
+      document.getElementById('filterSort').value = '';
+      document.getElementById('searchAircraft').value = '';
       onFilterChange();
     }
 
@@ -1499,6 +1685,96 @@
       loadHistory(true);
     }
 
+    // ── Feature 5: Highlight card ──────────────────────────────────
+    function highlightCard(icao24) {
+      const card = document.getElementById(`card-${icao24}`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Reflow trick to restart animation
+      card.classList.remove('highlighted');
+      void card.offsetWidth;
+      card.classList.add('highlighted');
+      card.addEventListener('animationend', () => card.classList.remove('highlighted'), { once: true });
+    }
+
+    // ── Feature 6: Emergency squawk alerts ──────────────────────
+    const notifiedEmergencies = new Set();
+    let alertsEnabled = localStorage.getItem('planeTrackerAlerts') === 'true';
+
+    function initAlertButton() {
+      const btn = document.getElementById('alertBtn');
+      btn.classList.toggle('active', alertsEnabled);
+    }
+
+    function toggleAlerts() {
+      alertsEnabled = !alertsEnabled;
+      localStorage.setItem('planeTrackerAlerts', String(alertsEnabled));
+      const btn = document.getElementById('alertBtn');
+      btn.classList.toggle('active', alertsEnabled);
+      if (alertsEnabled && 'Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+
+    function checkEmergencySquawks(planes) {
+      if (!alertsEnabled) return;
+      const emergencyCodes = ['7500', '7600', '7700'];
+      for (const plane of planes) {
+        if (!emergencyCodes.includes(plane.squawk)) continue;
+        const key = `${plane.icao24}-${plane.squawk}`;
+        if (notifiedEmergencies.has(key)) continue;
+        notifiedEmergencies.add(key);
+
+        const SQUAWK_LABELS = { '7500': 'HIJACK', '7600': 'RADIO FAILURE', '7700': 'EMERGENCY' };
+        const label = SQUAWK_LABELS[plane.squawk] || plane.squawk;
+        const callsign = (plane.callsign || '').trim() || plane.icao24;
+        const msg = `${label}: ${callsign} squawking ${plane.squawk}`;
+
+        // Show fixed banner
+        showEmergencyBanner(msg);
+
+        // Browser notification if permitted
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Plane Tracker — Emergency', { body: msg, icon: '/favicon.svg' });
+        }
+      }
+    }
+
+    function showEmergencyBanner(msg) {
+      // Remove existing banner if any
+      const existing = document.querySelector('.emergency-banner');
+      if (existing) existing.remove();
+
+      const banner = document.createElement('div');
+      banner.className = 'emergency-banner';
+      banner.innerHTML = `<span>⚠️ ${escapeHtml(msg)}</span><button class="dismiss-btn" onclick="this.parentElement.remove()">Dismiss</button>`;
+      document.body.prepend(banner);
+      setTimeout(() => banner.remove(), 30000);
+    }
+
+    // ── Feature 3: Search / find aircraft ────────────────────────
+    function onSearchInput() {
+      const query = (document.getElementById('searchAircraft').value || '').trim().toUpperCase();
+      if (!query || query.length < 2) return;
+      const match = allPlanes.find(p =>
+        (p.callsign || '').trim().toUpperCase().includes(query) ||
+        p.icao24.toUpperCase().includes(query)
+      );
+      if (!match) return;
+      highlightCard(match.icao24);
+      // Pan map to marker and open popup
+      const marker = planeMarkers.get(match.icao24);
+      if (marker && map) {
+        map.setView(marker.getLatLng(), map.getZoom());
+        marker.openPopup();
+      }
+    }
+
+    // ── Feature 7: CSV export ────────────────────────────────────
+    function exportCsv() {
+      window.location.href = '/api/history/csv';
+    }
+
     function createPlaneIcon(heading) {
       const deg = heading || 0;
       return L.divIcon({
@@ -1568,11 +1844,8 @@
           const m = L.marker([plane.lat, plane.lon], { icon: createPlaneIcon(plane.track) })
             .addTo(map)
             .bindPopup(popup);
-          // Clicking a map marker scrolls to the matching card
-          m.on('click', () => {
-            const card = document.getElementById(`card-${plane.icao24}`);
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          });
+          // Clicking a map marker scrolls to and highlights the matching card
+          m.on('click', () => highlightCard(plane.icao24));
           planeMarkers.set(plane.icao24, m);
         }
       });
@@ -1638,8 +1911,9 @@
       }
     }
 
-    // Load saved filters
+    // Load saved filters and alert state
     loadFilterState();
+    initAlertButton();
 
     // Get user location
     if (navigator.geolocation) {
@@ -1728,7 +2002,7 @@
 
       try {
         const response = await fetch(
-          `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}&extended=1`
+          `/api/planes?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`
         );
 
         // Handle rate limiting (429)
@@ -1758,26 +2032,33 @@
         if (data.states && data.states.length > 0) {
           const planes = data.states
             .filter(state => state[5] !== null && state[6] !== null)
-            .map(state => ({
-              icao24: state[0],
-              callsign: state[1],
-              origin_country: state[2],
-              timePosition: state[3],
-              lastContact: state[4],
-              lat: state[6],
-              lon: state[5],
-              alt: state[7],
-              onGround: state[8],
-              vel: state[9],
-              track: state[10],
-              vRate: state[11],
-              sensors: state[12],
-              geoAlt: state[13],
-              squawk: state[14],
-              spi: state[15],
-              positionSource: state[16],
-              category: state[17],
-            }));
+            .map(state => {
+              const p = {
+                icao24: state[0],
+                callsign: state[1],
+                origin_country: state[2],
+                timePosition: state[3],
+                lastContact: state[4],
+                lat: state[6],
+                lon: state[5],
+                alt: state[7],
+                onGround: state[8],
+                vel: state[9],
+                track: state[10],
+                vRate: state[11],
+                sensors: state[12],
+                geoAlt: state[13],
+                squawk: state[14],
+                spi: state[15],
+                positionSource: state[16],
+                category: state[17],
+                distKm: null,
+              };
+              if (p.lat != null && p.lon != null) {
+                p.distKm = haversineKm(userLocation.lat, userLocation.lon, p.lat, p.lon);
+              }
+              return p;
+            });
 
           const locationDisplay = cityName || `${userLocation.lat.toFixed(4)}°, ${userLocation.lon.toFixed(4)}°`;
           statusDesc.textContent = `Last updated: ${lastUpdate.toLocaleTimeString()} • Near ${locationDisplay}`;
@@ -1790,17 +2071,10 @@
           statusTitle.textContent = `Found ${allPlanes.length} aircraft`;
           updateFilterCount(filtered.length, allPlanes.length);
 
-          if (filtered.length === 0) {
-            emptyState.style.display = 'block';
-          } else {
-            filtered.forEach(plane => {
-              const card = createPlaneCard(plane);
-              grid.appendChild(card);
-              enrichCard(plane.icao24, plane.callsign);
-            });
-            updateMapMarkers(filtered);
-            updateTrails(filtered);
-          }
+          renderCards(filtered);
+
+          // Feature 6: check for emergency squawks
+          checkEmergencySquawks(allPlanes);
 
           // Log ALL planes to history (not just filtered)
           logSightings(allPlanes);
@@ -1968,6 +2242,10 @@
         return `${Math.floor(ago / 60)}m ${ago % 60}s ago`;
       })() : null;
 
+      const distDisplay = plane.distKm != null
+        ? (plane.distKm < 10 ? `${plane.distKm.toFixed(1)} km` : `${Math.round(plane.distKm)} km`)
+        : 'N/A';
+
       const CATEGORY_LABELS = {
         0: 'No info', 1: 'No info', 2: 'Light (< 15500 lbs)', 3: 'Small (15500–75000 lbs)',
         4: 'Large (75000–300000 lbs)', 5: 'High vortex large', 6: 'Heavy (> 300000 lbs)',
@@ -2030,6 +2308,11 @@
               <div class="stat-label">Heading</div>
               <div class="stat-value">${heading}</div>
               <span class="tiptext">True track — direction of travel relative to north</span>
+            </div>
+            <div class="tip">
+              <div class="stat-label">Distance</div>
+              <div class="stat-value">${distDisplay}</div>
+              <span class="tiptext">Distance from your location</span>
             </div>
             <div class="tip">
               <div class="stat-label">Vertical</div>

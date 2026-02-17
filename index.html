@@ -1005,8 +1005,9 @@
     let rateLimitEndTime = null;
     let rateLimitTimer = null;
     let backoffCount = 0;
-    const BASE_REFRESH_INTERVAL = 60000; // 60 seconds
+    const BASE_REFRESH_INTERVAL = 90000; // 90 seconds — safer for anonymous OpenSky limits
     let currentRefreshInterval = BASE_REFRESH_INTERVAL;
+    let lastFetchTime = 0; // timestamp of last successful or attempted fetch
 
     function escapeHtml(str) {
       const div = document.createElement('div');
@@ -1660,6 +1661,29 @@
       fetchPlanes();
     }
 
+    // ── Pause/resume when tab visibility changes ─────────────────────
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Tab went to background — stop polling to avoid wasting API calls
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+          refreshInterval = null;
+        }
+      } else {
+        // Tab came back — fetch if data is stale (older than the refresh interval)
+        const elapsed = Date.now() - lastFetchTime;
+        if (elapsed >= currentRefreshInterval) {
+          fetchPlanes(false);
+        } else {
+          // Schedule next fetch for the remaining time
+          if (refreshInterval) clearInterval(refreshInterval);
+          refreshInterval = setTimeout(() => {
+            fetchPlanes(false);
+          }, currentRefreshInterval - elapsed);
+        }
+      }
+    });
+
     function manualRefresh() {
       if (rateLimitEndTime && Date.now() < rateLimitEndTime) {
         // Can't refresh yet
@@ -1693,6 +1717,7 @@
       rateLimitCard.style.display = 'none';
       emptyState.style.display = 'none';
       grid.innerHTML = '';
+      lastFetchTime = Date.now();
 
       let rateLimited = false;
       const boxSize = 1.0;
@@ -1720,9 +1745,15 @@
         const data = await response.json();
         const lastUpdate = new Date();
 
-        // Reset backoff on success
-        backoffCount = 0;
-        currentRefreshInterval = BASE_REFRESH_INTERVAL;
+        // Gradually decay backoff instead of instant reset to avoid re-triggering limits
+        if (backoffCount > 0) {
+          backoffCount = Math.max(0, backoffCount - 1);
+          currentRefreshInterval = backoffCount > 0
+            ? Math.min(30000 * Math.pow(2, backoffCount - 1), 300000)
+            : BASE_REFRESH_INTERVAL;
+        } else {
+          currentRefreshInterval = BASE_REFRESH_INTERVAL;
+        }
 
         if (data.states && data.states.length > 0) {
           const planes = data.states

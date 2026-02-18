@@ -1,15 +1,24 @@
 import { insertPositions, pruneOldPositions, type PositionRow } from "./positions-db";
 
-// 8 overlapping 250 nm radius circles that cover CONUS with no gaps
+// 15 overlapping 250 nm radius circles covering all major US air traffic areas
 const CONUS_TILES: Array<{ lat: number; lon: number }> = [
+  // Original 8
   { lat: 47.5, lon: -122.5 }, // Pacific Northwest
   { lat: 47.5, lon: -110.0 }, // Northern Rockies
   { lat: 47.5, lon: -97.0  }, // Northern Plains
   { lat: 34.0, lon: -117.0 }, // Southwest
-  { lat: 36.0, lon: -100.0 }, // Central
+  { lat: 36.0, lon: -100.0 }, // Central Plains
   { lat: 32.0, lon: -85.0  }, // Southeast
   { lat: 42.0, lon: -74.0  }, // Northeast
   { lat: 29.0, lon: -90.0  }, // Gulf Coast
+  // Added to close gaps
+  { lat: 42.0, lon: -87.0  }, // Chicago / Great Lakes West
+  { lat: 40.0, lon: -82.0  }, // Ohio / Great Lakes East
+  { lat: 37.0, lon: -91.0  }, // Missouri / Tennessee
+  { lat: 36.0, lon: -79.0  }, // Carolinas / Virginia
+  { lat: 30.0, lon: -96.0  }, // Texas (Dallas / Houston)
+  { lat: 28.0, lon: -81.0  }, // Florida
+  { lat: 40.0, lon: -107.0 }, // Colorado / Rockies
 ];
 
 const RADIUS_NM = 250;

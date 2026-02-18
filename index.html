@@ -1167,9 +1167,9 @@
             <span id="searchText">Go</span>
           </button>
         </form>
-        <button onclick="toggleTrails()" id="trailsBtn">
+        <button onclick="toggleTrails()" id="trailsBtn" class="active">
           <span>〰️</span>
-          <span class="btn-label">Trails</span>
+          <span class="btn-label">Trails On</span>
         </button>
         <button class="alert-toggle" onclick="toggleAlerts()" id="alertBtn" title="Toggle emergency alerts">
           <span id="alertIcon">🚨</span>
@@ -1576,7 +1576,9 @@
     const positionHistory = new Map(); // icao24 -> [{lat, lon, alt, timestamp}]
     const trailPolylines = new Map(); // icao24 -> L.polyline
     const trailsFetched = new Set(); // icao24s whose server-side trail has been loaded
-    let trailsVisible = false;
+    let trailsVisible = true; // on by default — server has history from page load
+    let hoveredIcao24 = null;  // transient: set while hovering a marker or card
+    let selectedIcao24 = null; // sticky: set when a card is expanded or marker clicked
 
     function altitudeToColor(altMeters) {
       if (altMeters == null || altMeters <= 0) return '#22c55e'; // green - ground level
@@ -1659,8 +1661,9 @@
     function updateTrails(planes) {
       if (!map) return;
       const visibleIcaos = new Set(planes.map(p => p.icao24));
+      const focusedIcao24 = hoveredIcao24 || selectedIcao24;
 
-      // Remove polylines for planes not in the visible set
+      // Remove polylines for planes no longer visible
       for (const [icao24, polyline] of trailPolylines) {
         if (!visibleIcaos.has(icao24)) {
           polyline.remove();
@@ -1675,11 +1678,13 @@
         const latlngs = history.map(p => [p.lat, p.lon]);
         const lastAlt = history[history.length - 1].alt;
         const color = altitudeToColor(lastAlt);
+        const shouldShow = trailsVisible && (!focusedIcao24 || plane.icao24 === focusedIcao24);
 
         if (trailPolylines.has(plane.icao24)) {
           const poly = trailPolylines.get(plane.icao24);
           poly.setLatLngs(latlngs);
           poly.setStyle({ color });
+          if (shouldShow) poly.addTo(map); else poly.remove();
         } else {
           const poly = L.polyline(latlngs, {
             color,
@@ -1687,7 +1692,7 @@
             opacity: 0.7,
             dashArray: '6 4',
           });
-          if (trailsVisible) poly.addTo(map);
+          if (shouldShow) poly.addTo(map);
           trailPolylines.set(plane.icao24, poly);
         }
       }
@@ -1699,12 +1704,10 @@
       btn.classList.toggle('active', trailsVisible);
       btn.querySelector('span:last-child').textContent = trailsVisible ? 'Trails On' : 'Trails';
 
-      for (const [, polyline] of trailPolylines) {
-        if (trailsVisible) {
-          polyline.addTo(map);
-        } else {
-          polyline.remove();
-        }
+      const focusedIcao24 = hoveredIcao24 || selectedIcao24;
+      for (const [icao24, polyline] of trailPolylines) {
+        const shouldShow = trailsVisible && (!focusedIcao24 || icao24 === focusedIcao24);
+        if (shouldShow) polyline.addTo(map); else polyline.remove();
       }
     }
 
@@ -1804,8 +1807,14 @@
     function toggleCardExpand(icao24) {
       if (expandedCards.has(icao24)) {
         expandedCards.delete(icao24);
+        if (selectedIcao24 === icao24) {
+          selectedIcao24 = null;
+          updateTrails(allPlanes);
+        }
       } else {
         expandedCards.add(icao24);
+        selectedIcao24 = icao24;
+        updateTrails(allPlanes);
       }
       const card = document.getElementById(`card-${icao24}`);
       if (card) {
@@ -1819,6 +1828,8 @@
         const card = document.getElementById(`card-${icao24}`);
         if (card) card.classList.remove('collapsed');
       }
+      selectedIcao24 = icao24;
+      updateTrails(allPlanes);
     }
 
     // ── Feature 9: Lazy-load enrichment via IntersectionObserver ──
@@ -2170,6 +2181,8 @@
             .bindPopup(popup);
           // Clicking a map marker scrolls to and highlights the matching card
           m.on('click', () => highlightCard(plane.icao24));
+          m.on('mouseover', () => { hoveredIcao24 = plane.icao24; updateTrails(allPlanes); });
+          m.on('mouseout',  () => { hoveredIcao24 = null;          updateTrails(allPlanes); });
           planeMarkers.set(plane.icao24, m);
         }
       });
@@ -2773,6 +2786,10 @@
         if (e.target.closest('a')) return;
         toggleCardExpand(plane.icao24);
       });
+
+      // Hovering a card previews that plane's trail
+      card.addEventListener('mouseenter', () => { hoveredIcao24 = plane.icao24; updateTrails(allPlanes); });
+      card.addEventListener('mouseleave', () => { hoveredIcao24 = null;          updateTrails(allPlanes); });
 
       return card;
     }

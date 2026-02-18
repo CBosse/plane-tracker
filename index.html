@@ -1017,45 +1017,129 @@
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
     }
 
+    /* ── Filter toggle button (mobile only) ── */
+    .filter-toggle-btn {
+      display: none;
+    }
+    .filter-bar-content {
+      display: contents; /* transparent wrapper on desktop */
+    }
+
     /* ── Feature 1: Responsive / Mobile ── */
     @media (max-width: 640px) {
-      body { padding: 10px; }
+      body { padding: 8px; }
+
+      /* Header compact */
       header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
+        gap: 8px;
+        margin-bottom: 14px;
       }
+      .icon { width: 40px; height: 40px; font-size: 18px; }
+      h1 { font-size: 22px; }
+      .subtitle { font-size: 12px; margin-top: 2px; }
+
+      /* Controls row: smaller buttons */
       .header-controls {
         width: 100%;
         justify-content: flex-start;
+        gap: 6px;
+        flex-wrap: wrap;
       }
-      .location-input { width: 140px; }
+      button {
+        padding: 8px 12px;
+        font-size: 13px;
+        gap: 5px;
+      }
+      .btn-label { display: none; }
+      .theme-toggle, .alert-toggle {
+        width: 36px; height: 36px;
+        padding: 6px; font-size: 16px;
+      }
+      .location-input {
+        width: 130px;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+
+      /* Status card */
+      .status-card { padding: 14px 16px; margin-bottom: 14px; }
+      .status-title { font-size: 18px; }
+      .status-desc { font-size: 12px; }
+
+      /* Filter bar — collapsible on mobile */
       .filter-bar {
+        flex-direction: column;
+        padding: 0;
+        gap: 0;
+        overflow: visible;
+      }
+      .filter-toggle-btn {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        background: transparent;
+        box-shadow: none;
+        color: var(--text-on-glass);
+        font-size: 13px;
+        border-radius: 0;
+      }
+      .filter-toggle-btn:hover { transform: none; box-shadow: none; }
+      .filter-bar-content {
+        display: none;
+        flex-direction: row;
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 12px 14px;
+        padding: 10px 12px 12px;
         gap: 8px;
+        align-items: flex-end;
         scrollbar-width: thin;
+        width: 100%;
       }
-      .filter-bar::-webkit-scrollbar { height: 4px; }
-      .filter-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
-      .filter-group input, .filter-group select { width: 90px; font-size: 12px; }
-      .filter-group select { width: 100px; }
-      .grid { grid-template-columns: 1fr; }
+      .filter-bar-content.open {
+        display: flex;
+      }
+      .filter-bar-content::-webkit-scrollbar { height: 4px; }
+      .filter-bar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+      .filter-group label { font-size: 10px; }
+      .filter-group input, .filter-group select { width: 82px; font-size: 12px; padding: 6px 8px; }
+      .filter-group select { width: 90px; }
+      .filter-count {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
+      .filter-clear-btn { padding: 6px 10px; font-size: 11px; }
+
+      /* Map — taller, better use of screen */
+      .map-container { height: min(55vw, 55vh); min-height: 320px; margin-bottom: 16px; }
+
+      /* Cards */
+      .grid { grid-template-columns: 1fr; gap: 12px; }
       .compact-view { flex-direction: row; }
-      .compact-photo { width: 70px; min-width: 70px; height: 60px; }
+      .compact-photo { width: 72px; min-width: 72px; height: 62px; }
       .compact-header .plane-callsign { font-size: 14px; }
       .compact-stats { gap: 8px; font-size: 11px; }
-      .map-container { height: 280px; }
+
+      /* Tabs */
       .tab-btn { font-size: 13px; padding: 10px 16px; }
+
+      /* History */
       .history-item {
         flex-direction: column;
         align-items: flex-start;
       }
-      .history-stats {
-        grid-template-columns: 1fr 1fr;
-      }
+      .history-stats { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Extra small (very narrow phones) */
+    @media (max-width: 380px) {
+      .location-input { width: 100px; }
+      h1 { font-size: 19px; }
+      .map-container { min-height: 280px; }
     }
   </style>
 </head>
@@ -1085,7 +1169,7 @@
         </form>
         <button onclick="toggleTrails()" id="trailsBtn">
           <span>〰️</span>
-          <span>Trails</span>
+          <span class="btn-label">Trails</span>
         </button>
         <button class="alert-toggle" onclick="toggleAlerts()" id="alertBtn" title="Toggle emergency alerts">
           <span id="alertIcon">🚨</span>
@@ -1095,7 +1179,7 @@
         </button>
         <button onclick="manualRefresh()" id="refreshBtn">
           <span id="refreshIcon">↻</span>
-          <span id="refreshText">Refresh</span>
+          <span id="refreshText" class="btn-label">Refresh</span>
         </button>
       </div>
     </header>
@@ -1106,6 +1190,10 @@
     </div>
 
     <div class="filter-bar" id="filterBar">
+      <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleMobileFilters()">
+        <span>⚙️</span><span>Filters</span><span id="filterToggleArrow">▼</span>
+      </button>
+      <div class="filter-bar-content" id="filterBarContent">
       <div class="filter-group">
         <label>Alt Min (ft)</label>
         <input type="number" id="filterAltMin" placeholder="0" onchange="onFilterChange()">
@@ -1159,6 +1247,7 @@
         <input type="text" id="searchAircraft" placeholder="Callsign / ICAO" oninput="onSearchInput()" style="width:130px;">
       </div>
       <button class="filter-clear-btn" onclick="clearFilters()">Clear</button>
+      </div><!-- filter-bar-content -->
       <span class="filter-count" id="filterCount"></span>
     </div>
 
@@ -1242,6 +1331,14 @@
         applyThemeIcon();
       }
     });
+
+    // ── Mobile filter toggle ─────────────────────────────────────────
+    function toggleMobileFilters() {
+      const content = document.getElementById('filterBarContent');
+      const arrow = document.getElementById('filterToggleArrow');
+      const isOpen = content.classList.toggle('open');
+      arrow.textContent = isOpen ? '▲' : '▼';
+    }
 
     // ── Feature 4: Haversine distance ────────────────────────────────
     function haversineKm(lat1, lon1, lat2, lon2) {

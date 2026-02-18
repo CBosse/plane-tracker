@@ -1979,6 +1979,7 @@
       const statusDesc = document.getElementById('statusDesc');
       const rateLimitCard = document.getElementById('rateLimitCard');
       const rateLimitMsg = document.getElementById('rateLimitMsg');
+      const retryTimer = document.getElementById('retryTimer');
       const errorCard = document.getElementById('errorCard');
       const errorMsg = document.getElementById('errorMsg');
       const emptyState = document.getElementById('emptyState');
@@ -2008,6 +2009,13 @@
         if (response.status === 429) {
           rateLimited = true;
           handleRateLimit();
+          return;
+        }
+
+        // Handle connection failures (502, 504, etc)
+        if (response.status === 502 || response.status === 504) {
+          rateLimited = true;
+          handleConnectionError('The OpenSky API is temporarily unreachable. Retrying automatically...');
           return;
         }
 
@@ -2169,6 +2177,56 @@
       } else {
         retryTimer.textContent = `Retry in ${remaining} sec`;
       }
+    }
+
+    function handleConnectionError(message) {
+      const btn = document.getElementById('refreshBtn');
+      const icon = document.getElementById('refreshIcon');
+      const refreshText = document.getElementById('refreshText');
+      const statusTitle = document.getElementById('statusTitle');
+      const statusDesc = document.getElementById('statusDesc');
+      const rateLimitCard = document.getElementById('rateLimitCard');
+      const rateLimitMsg = document.getElementById('rateLimitMsg');
+      const retryTimer = document.getElementById('retryTimer');
+      const errorCard = document.getElementById('errorCard');
+
+      // Stop the loading spinner immediately
+      icon.classList.remove('loading');
+      refreshText.textContent = 'Refresh';
+
+      statusTitle.textContent = 'Connection Error';
+      statusDesc.textContent = message;
+
+      rateLimitCard.style.display = 'block';
+      rateLimitMsg.textContent = message;
+
+      errorCard.style.display = 'none';
+      btn.disabled = true;
+
+      // Set the rate limit end time for countdown timer
+      rateLimitEndTime = Date.now() + 30000;
+
+      // Update countdown timer
+      updateRetryTimer();
+      rateLimitTimer = setInterval(updateRetryTimer, 1000);
+
+      // Clear any existing intervals/timeouts
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+      if (rateLimitTimeout) {
+        clearTimeout(rateLimitTimeout);
+      }
+
+      // Schedule next fetch after backoff
+      rateLimitTimeout = setTimeout(() => {
+        clearInterval(rateLimitTimer);
+        rateLimitCard.style.display = 'none';
+        rateLimitEndTime = null;
+        btn.disabled = false;
+        fetchPlanes(false);
+      }, 30000);
     }
 
     function getSquawkMeaning(code) {

@@ -29,7 +29,7 @@ interface ApiResponse {
 }
 
 /**
- * Plane Tracker - Shows planes flying near your location using OpenSky Network API
+ * Plane Tracker - Shows planes flying near your location using adsb.lol API
  */
 export default function PlaneTracker() {
   const [planes, setPlanes] = useState<Plane[]>([]);
@@ -294,15 +294,7 @@ export default function PlaneTracker() {
 
         <footer className="mt-12 text-center text-xs text-muted-foreground">
           <p>
-            Data provided by the OpenSky Network •
-            <a
-              href="https://opensky-network.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mx-1 underline"
-            >
-              Learn more
-            </a>
+            Data provided by adsb.lol • Free open-source ADS-B data
           </p>
         </footer>
       </div>

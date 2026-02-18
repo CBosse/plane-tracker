@@ -1078,7 +1078,7 @@
     </div>
 
     <footer>
-      <p>Data provided by <a href="https://opensky-network.org" target="_blank" rel="noopener noreferrer">OpenSky Network</a> • <a href="https://opensky-network.org" target="_blank" rel="noopener noreferrer">Learn more</a></p>
+      <p>Data provided by <a href="https://adsb.lol" target="_blank" rel="noopener noreferrer">adsb.lol</a> • Free open-source ADS-B data</p>
     </footer>
   </div>
 
@@ -1436,7 +1436,7 @@
         speedMin: document.getElementById('filterSpeedMin').value,
         speedMax: document.getElementById('filterSpeedMax').value,
         airborne: document.getElementById('filterAirborne').value,
-        country: document.getElementById('filterCountry').value,
+        country: document.getElementById('filterCountry').value.trim().toLowerCase(),
         squawk: document.getElementById('filterSquawk').value,
         sort: document.getElementById('filterSort').value,
       };

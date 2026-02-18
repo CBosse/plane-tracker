@@ -2,7 +2,7 @@ This file provides guidance when working with code in this repository. The READM
 
 # Project Notes
 
-This is a **Plane Tracker** - a standalone web application that displays real-time aircraft information near your location using the [OpenSky Network API](https://opensky-network.org).
+This is a **Plane Tracker** - a standalone web application that displays real-time aircraft information near your location using the [adsb.lol API](https://adsb.lol) (free, open-source ADS-B data).
 
 ## Features
 
@@ -22,11 +22,11 @@ This is a **single-file standalone application** (no React, no build process) th
 - `index.html` - Complete application with embedded CSS and JavaScript
 - No backend server required for the core functionality
 - No external dependencies (all styling and logic inline)
-- Direct API calls to OpenSky Network from the browser
+- Direct API calls to adsb.lol from the browser
 
 ## Rate Limiting
 
-The OpenSky Network API has rate limits. This application handles them gracefully:
+The adsb.lol API is free to use. The application handles rate limiting gracefully:
 
 1. **Default Refresh**: Every 60 seconds
 2. **On Rate Limit (429)**: Exponential backoff starting at 30s, doubling up to max 5 minutes
@@ -44,23 +44,22 @@ The OpenSky Network API has rate limits. This application handles them gracefull
 
 ## API Usage
 
-The application queries the OpenSky Network API with a bounding box around your location:
+The application queries the adsb.lol API with a bounding box around your location:
 
 ```
-GET https://opensky-network.org/api/states/all?lamin={lat-0.5}&lamax={lat+0.5}&lomin={lon-0.5}&lomax={lon+0.5}&extended=1
+GET https://api.adsb.lol/v2/point/{lat}/{lon}/{radius}
 ```
 
 Parameters:
-- `lamin/lamax`: Latitude bounds (~100km box)
-- `lomin/lomax`: Longitude bounds (~100km box)  
-- `extended=1`: Returns additional data (velocity, vertical rate, etc.)
+- `lat/lon`: Center point coordinates
+- `radius`: Search radius in nautical miles (max 250)
 
 ## Browser Requirements
 
 - Modern browser with ES6 support
 - Geolocation API support (optional, falls back to default location)
 - JavaScript enabled
-- No authentication required for OpenSky Network public API
+- No authentication required for adsb.lol API
 
 ## Deployment
 

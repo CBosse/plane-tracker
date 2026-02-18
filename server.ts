@@ -17,7 +17,7 @@ const mode: Mode =
 
 import { upsertSightings, getHistory, getStats, getAllHistory } from "./backend-lib/sightings-db";
 
-// ── OpenSky proxy with in-process cache ──────────────────────────────
+// ── Plane API proxy with in-process cache ──────────────────────────────
 const proxyCache = new Map<string, { data: any; expires: number }>();
 const PROXY_CACHE_TTL = 30_000; // 30 seconds
 
@@ -37,32 +37,104 @@ app.get("/api/planes", async (c) => {
     return c.json(cached.data);
   }
 
-  const url = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}&extended=1`;
-  const headers: Record<string, string> = {};
+  // Calculate center point and radius from bounding box
+  const lat = (parseFloat(lamin) + parseFloat(lamax)) / 2;
+  const lon = (parseFloat(lomin) + parseFloat(lomax)) / 2;
+  // Approximate radius in nautical miles (~1 degree = 60 nm)
+  const radius = Math.max(
+    parseFloat(lamax) - parseFloat(lamin),
+    parseFloat(lomax) - parseFloat(lomin)
+  ) * 30; // half the box diagonal approx
 
-  const user = process.env.OPENSKY_USER;
-  const pass = process.env.OPENSKY_PASS;
-  if (user && pass) {
-    headers["Authorization"] = "Basic " + btoa(`${user}:${pass}`);
-  }
+  const url = `https://api.adsb.lol/v2/point/${lat}/${lon}/${Math.min(Math.round(radius), 250)}`;
 
   try {
-    const res = await fetch(url, { headers });
+    const res = await fetch(url);
 
-    if (res.status === 429) {
-      return c.json({ error: "Rate limited" }, 429);
-    }
     if (!res.ok) {
-      return c.json({ error: `OpenSky error: ${res.status}` }, res.status as any);
+      return c.json({ error: `API error: ${res.status}` }, res.status as any);
     }
 
     const data = await res.json();
-    proxyCache.set(cacheKey, { data, expires: Date.now() + PROXY_CACHE_TTL });
-    return c.json(data);
+    
+    // Transform adsb.lol format to OpenSky format for backward compatibility
+    const states = (data.ac || []).map((ac: any) => [
+      ac.hex,                    // 0: icao24
+      ac.flight?.trim() || null, // 1: callsign
+      getCountryFromHex(ac.hex), // 2: origin_country (derived from hex)
+      null,                      // 3: time_position
+      null,                      // 4: last_contact
+      ac.lon,                    // 5: longitude
+      ac.lat,                    // 6: latitude
+      ac.alt_baro,               // 7: baro_altitude
+      ac.alt_baro === 0 || ac.gs < 5, // 8: on_ground (heuristic)
+      ac.gs,                     // 9: velocity
+      ac.track,                  // 10: true_track
+      ac.baro_rate ?? ac.geom_rate, // 11: vertical_rate
+      null,                      // 12: sensors
+      ac.alt_geom,               // 13: geo_altitude
+      ac.squawk,                 // 14: squawk
+      ac.spi,                    // 15: spi
+      null,                      // 16: position_source
+      ac.category,               // 17: category
+    ]);
+
+    const result = { states };
+    proxyCache.set(cacheKey, { data: result, expires: Date.now() + PROXY_CACHE_TTL });
+    return c.json(result);
   } catch (e) {
-    return c.json({ error: "Failed to reach OpenSky" }, 502);
+    return c.json({ error: "Failed to reach aircraft API" }, 502);
   }
 });
+
+// Helper to derive country from ICAO24 hex code
+function getCountryFromHex(hex: string): string {
+  if (!hex) return "Unknown";
+  const prefix = hex.slice(0, 2).toUpperCase();
+  const countryMap: Record<string, string> = {
+    "A0": "United States", "A1": "United States", "A2": "United States", "A3": "United States", "A4": "United States", "A5": "United States", "A6": "United States", "A7": "United States", "A8": "United States", "A9": "United States", "AA": "United States", "AB": "United States", "AC": "United States", "AD": "United States", "AE": "United States", "AF": "United States",
+    "C0": "Canada", "C1": "Canada", "C2": "Canada", "C3": "Canada", "C4": "Canada", "C5": "Canada", "C6": "Canada", "C7": "Canada", "C8": "Canada", "C9": "Canada", "CA": "Canada", "CB": "Canada", "CC": "Canada", "CD": "Canada", "CE": "Canada", "CF": "Canada",
+    "E0": "Argentina", "E1": "Argentina", "E2": "Argentina", "E3": "Argentina",
+    "E4": "Brazil", "E5": "Brazil", "E6": "Brazil", "E7": "Brazil",
+    "E8": "Mexico",
+    "E9": "Venezuela",
+    "EA": "Ecuador", "EB": "Ecuador",
+    "EC": "Colombia", "ED": "Colombia",
+    "EE": "Peru", "EF": "Peru",
+    "F0": "Germany", "F1": "Germany", "F2": "Germany", "F3": "Germany",
+    "40": "United Kingdom", "41": "United Kingdom", "42": "United Kingdom", "43": "United Kingdom",
+    "44": "United Kingdom", "45": "United Kingdom", "46": "United Kingdom", "47": "United Kingdom",
+    "48": "United Kingdom", "49": "United Kingdom", "4A": "United Kingdom", "4B": "United Kingdom",
+    "4C": "United Kingdom", "4D": "United Kingdom", "4E": "United Kingdom", "4F": "United Kingdom",
+    "50": "Belgium", "51": "Belgium",
+    "52": "France", "53": "France", "54": "France", "55": "France", "56": "France", "57": "France",
+    "58": "Spain", "59": "Spain", "5A": "Spain", "5B": "Spain", "5C": "Spain", "5D": "Spain", "5E": "Spain", "5F": "Spain",
+    "3C": "France", "3D": "France",
+    "3E": "Germany", "3F": "Germany",
+    "3B": "France",
+    "3A": "Italy",
+    "39": "Italy",
+    "38": "Switzerland",
+    "4B": "Switzerland",
+    "45": "Denmark",
+    "46": "Sweden",
+    "47": "Norway",
+    "48": "Finland",
+    "48": "Poland",
+    "7C": "Australia",
+    "7D": "Australia",
+    "7E": "Australia",
+    "7F": "Australia",
+    "80": "China", "81": "China", "82": "China", "83": "China", "84": "China", "85": "China", "86": "China", "87": "China",
+    "88": "Taiwan",
+    "89": "Japan", "8A": "Japan", "8B": "Japan", "8C": "Japan", "8D": "Japan", "8E": "Japan", "8F": "Japan",
+    "90": "India", "91": "India", "92": "India", "93": "India", "94": "India", "95": "India", "96": "India", "97": "India",
+    "76": "Malaysia", "77": "Malaysia",
+    "78": "China",
+    "A0": "South Africa",
+  };
+  return countryMap[prefix] || "Unknown";
+}
 
 // ── CSV export ───────────────────────────────────────────────────────
 app.get("/api/history/csv", (c) => {

@@ -894,6 +894,129 @@
       background: #dc2626;
       color: white;
     }
+    /* ── Collapsible compact cards ── */
+    .plane-card {
+      cursor: pointer;
+      position: relative;
+    }
+    .expand-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border-radius: 50%;
+      box-shadow: var(--shadow-sm);
+      z-index: 2;
+      transition: transform 0.3s ease;
+    }
+    .plane-card.collapsed .expand-indicator {
+      transform: rotate(0deg);
+    }
+    .plane-card:not(.collapsed) .expand-indicator {
+      transform: rotate(180deg);
+    }
+    /* Compact view */
+    .compact-view {
+      display: none;
+      padding: 12px 16px;
+      gap: 14px;
+      align-items: center;
+    }
+    .plane-card.collapsed .compact-view {
+      display: flex;
+    }
+    .plane-card:not(.collapsed) .compact-view {
+      display: none;
+    }
+    .compact-photo {
+      width: 100px;
+      min-width: 100px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--inset-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 28px;
+    }
+    .compact-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .compact-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .compact-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .compact-header .plane-callsign {
+      font-size: 16px;
+    }
+    .compact-detail {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .compact-route {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-heading);
+      display: none;
+    }
+    .compact-route.visible {
+      display: block;
+    }
+    .compact-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--text-label);
+    }
+    .compact-stats span {
+      white-space: nowrap;
+    }
+    .compact-stats strong {
+      color: var(--text-heading);
+      font-weight: 600;
+    }
+    /* Full view toggle */
+    .plane-card.collapsed .plane-photo-wrap,
+    .plane-card.collapsed .plane-body {
+      display: none;
+    }
+    .plane-card:not(.collapsed) .plane-photo-wrap,
+    .plane-card:not(.collapsed) .plane-body {
+      display: block;
+    }
+    /* Smooth transition */
+    .plane-card.collapsed {
+      transition: all 0.2s ease;
+    }
+    .plane-card.collapsed:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+
     /* ── Feature 1: Responsive / Mobile ── */
     @media (max-width: 640px) {
       body { padding: 10px; }
@@ -920,6 +1043,10 @@
       .filter-group input, .filter-group select { width: 90px; font-size: 12px; }
       .filter-group select { width: 100px; }
       .grid { grid-template-columns: 1fr; }
+      .compact-view { flex-direction: row; }
+      .compact-photo { width: 70px; min-width: 70px; height: 60px; }
+      .compact-header .plane-callsign { font-size: 14px; }
+      .compact-stats { gap: 8px; font-size: 11px; }
       .map-container { height: 280px; }
       .tab-btn { font-size: 13px; padding: 10px 16px; }
       .history-item {
@@ -1290,6 +1417,29 @@
         }
       }
 
+      // Populate compact view details
+      const compactDetailEl = document.getElementById(`compact-detail-${icao24}`);
+      if (compactDetailEl) {
+        if (info) {
+          const parts = [];
+          if (info.type) parts.push(info.type);
+          else if (info.manufacturer) parts.push(info.manufacturer);
+          if (info.operator) parts.push(info.operator);
+          compactDetailEl.textContent = parts.join(' · ') || 'Unknown aircraft';
+        } else {
+          compactDetailEl.textContent = 'Unknown aircraft';
+        }
+      }
+
+      // Populate compact photo
+      const compactPhotoEl = document.getElementById(`compact-photo-${icao24}`);
+      if (compactPhotoEl) {
+        const photoUrl = photo?.url || info?.fallbackPhoto || info?.fallbackPhotoThumb || null;
+        if (photoUrl) {
+          compactPhotoEl.innerHTML = `<img src="${escapeHtml(photoUrl)}" alt="Aircraft" loading="lazy" />`;
+        }
+      }
+
       const routeEl = document.getElementById(`route-${icao24}`);
       if (routeEl && route) {
         routeEl.style.display = '';
@@ -1312,6 +1462,13 @@
             <span>${escapeHtml(destLabel)}</span>
           </div>
         `;
+
+        // Also populate compact route
+        const compactRouteEl = document.getElementById(`compact-route-${icao24}`);
+        if (compactRouteEl) {
+          compactRouteEl.textContent = `${origCode} → ${destCode}`;
+          compactRouteEl.classList.add('visible');
+        }
       }
     }
 
@@ -1497,6 +1654,29 @@
           break;
       }
       return sorted;
+    }
+
+    // ── Collapsible card state ──────────────────────────────────────
+    const expandedCards = new Set(); // icao24s that are expanded
+
+    function toggleCardExpand(icao24) {
+      if (expandedCards.has(icao24)) {
+        expandedCards.delete(icao24);
+      } else {
+        expandedCards.add(icao24);
+      }
+      const card = document.getElementById(`card-${icao24}`);
+      if (card) {
+        card.classList.toggle('collapsed', !expandedCards.has(icao24));
+      }
+    }
+
+    function expandCard(icao24) {
+      if (!expandedCards.has(icao24)) {
+        expandedCards.add(icao24);
+        const card = document.getElementById(`card-${icao24}`);
+        if (card) card.classList.remove('collapsed');
+      }
     }
 
     // ── Feature 9: Lazy-load enrichment via IntersectionObserver ──
@@ -1689,6 +1869,8 @@
     function highlightCard(icao24) {
       const card = document.getElementById(`card-${icao24}`);
       if (!card) return;
+      // Auto-expand the card
+      expandCard(icao24);
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       // Reflow trick to restart animation
       card.classList.remove('highlighted');
@@ -2262,7 +2444,8 @@
 
     function createPlaneCard(plane) {
       const card = document.createElement('div');
-      card.className = 'plane-card';
+      const isExpanded = expandedCards.has(plane.icao24);
+      card.className = isExpanded ? 'plane-card' : 'plane-card collapsed';
       card.id = `card-${plane.icao24}`;
 
       const alt = plane.alt != null ? `${Math.round(plane.alt * 3.28084).toLocaleString()} ft` : 'N/A';
@@ -2319,7 +2502,31 @@
       };
       const categoryLabel = (plane.category != null && plane.category > 1) ? CATEGORY_LABELS[plane.category] || null : null;
 
+      // Compact view values
+      const compactCallsign = escapeHtml((plane.callsign || '').trim() || 'Unknown');
+      const compactIcao = escapeHtml(plane.icao24);
+      const compactCountry = escapeHtml(plane.origin_country);
+
       card.innerHTML = `
+        <span class="expand-indicator">▼</span>
+        <div class="compact-view" id="compact-${plane.icao24}">
+          <div class="compact-photo" id="compact-photo-${plane.icao24}">✈️</div>
+          <div class="compact-info">
+            <div class="compact-header">
+              <span class="plane-callsign">${compactCallsign}</span>
+              <span class="plane-icao">${compactIcao}</span>
+              <span class="plane-badge">${compactCountry}</span>
+            </div>
+            <div class="compact-detail" id="compact-detail-${plane.icao24}">Loading aircraft info…</div>
+            <div class="compact-route" id="compact-route-${plane.icao24}"></div>
+            <div class="compact-stats">
+              <span>Alt: <strong>${alt}</strong></span>
+              <span>Speed: <strong>${speed}</strong></span>
+              <span>Dist: <strong>${distDisplay}</strong></span>
+              ${vClass ? `<span class="${vClass}"><strong>${vStatus}</strong></span>` : ''}
+            </div>
+          </div>
+        </div>
         <div class="plane-photo-wrap" id="photo-${plane.icao24}"></div>
         <div class="plane-body">
           <!-- Identity row: callsign + icao + country -->
@@ -2416,6 +2623,13 @@
           ` : ''}
         </div>
       `;
+
+      // Click to toggle expand/collapse
+      card.addEventListener('click', (e) => {
+        // Don't toggle if clicking a link or tooltip
+        if (e.target.closest('a')) return;
+        toggleCardExpand(plane.icao24);
+      });
 
       return card;
     }

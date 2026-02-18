@@ -16,12 +16,14 @@ const mode: Mode =
  */
 
 import { upsertSightings, getHistory, getStats, getAllHistory } from "./backend-lib/sightings-db";
+import { queryLatestInBbox, queryTrail, getPositionsDbStats } from "./backend-lib/positions-db";
+import { startGlobalPoller } from "./backend-lib/global-poller";
 
-// ── Plane API proxy with in-process cache ──────────────────────────────
-const proxyCache = new Map<string, { data: any; expires: number }>();
-const PROXY_CACHE_TTL = 30_000; // 30 seconds
+// Start the global CONUS poller on server boot
+startGlobalPoller();
 
-app.get("/api/planes", async (c) => {
+// ── Plane API — served from local positions DB ──────────────────────────
+app.get("/api/planes", (c) => {
   const lamin = c.req.query("lamin");
   const lamax = c.req.query("lamax");
   const lomin = c.req.query("lomin");
@@ -31,60 +33,50 @@ app.get("/api/planes", async (c) => {
     return c.json({ error: "lamin/lamax/lomin/lomax required" }, 400);
   }
 
-  const cacheKey = `${lamin},${lamax},${lomin},${lomax}`;
-  const cached = proxyCache.get(cacheKey);
-  if (cached && Date.now() < cached.expires) {
-    return c.json(cached.data);
-  }
+  const planes = queryLatestInBbox(
+    parseFloat(lamin),
+    parseFloat(lamax),
+    parseFloat(lomin),
+    parseFloat(lomax)
+  );
 
-  // Calculate center point and radius from bounding box
-  const lat = (parseFloat(lamin) + parseFloat(lamax)) / 2;
-  const lon = (parseFloat(lomin) + parseFloat(lomax)) / 2;
-  // Approximate radius in nautical miles (~1 degree = 60 nm)
-  const radius = Math.max(
-    parseFloat(lamax) - parseFloat(lamin),
-    parseFloat(lomax) - parseFloat(lomin)
-  ) * 30; // half the box diagonal approx
+  // Return same OpenSky-format state vector array for zero frontend changes
+  const states = planes.map((p) => [
+    p.icao24,                         // 0: icao24
+    p.callsign,                        // 1: callsign
+    getCountryFromHex(p.icao24),       // 2: origin_country
+    null,                              // 3: time_position
+    p.ts,                              // 4: last_contact
+    p.lon,                             // 5: longitude
+    p.lat,                             // 6: latitude
+    p.alt,                             // 7: baro_altitude
+    p.on_ground === 1,                 // 8: on_ground
+    p.speed,                           // 9: velocity
+    p.heading,                         // 10: true_track
+    p.vrate,                           // 11: vertical_rate
+    null,                              // 12: sensors
+    null,                              // 13: geo_altitude
+    p.squawk,                          // 14: squawk
+    null,                              // 15: spi
+    null,                              // 16: position_source
+    null,                              // 17: category
+  ]);
 
-  const url = `https://api.adsb.lol/v2/point/${lat}/${lon}/${Math.min(Math.round(radius), 250)}`;
+  return c.json({ states });
+});
 
-  try {
-    const res = await fetch(url);
+// ── Trail API — full position history for a single aircraft ──────────────
+app.get("/api/trails/:icao24", (c) => {
+  const icao24 = c.req.param("icao24").toLowerCase();
+  const sinceParam = c.req.query("since");
+  const sinceTs = sinceParam ? parseInt(sinceParam, 10) : undefined;
+  const trail = queryTrail(icao24, sinceTs);
+  return c.json({ trail });
+});
 
-    if (!res.ok) {
-      return c.json({ error: `API error: ${res.status}` }, res.status as any);
-    }
-
-    const data = await res.json();
-    
-    // Transform adsb.lol format to OpenSky format for backward compatibility
-    const states = (data.ac || []).map((ac: any) => [
-      ac.hex,                    // 0: icao24
-      ac.flight?.trim() || null, // 1: callsign
-      getCountryFromHex(ac.hex), // 2: origin_country (derived from hex)
-      null,                      // 3: time_position
-      null,                      // 4: last_contact
-      ac.lon,                    // 5: longitude
-      ac.lat,                    // 6: latitude
-      ac.alt_baro,               // 7: baro_altitude
-      ac.alt_baro === 0 || ac.gs < 5, // 8: on_ground (heuristic)
-      ac.gs,                     // 9: velocity
-      ac.track,                  // 10: true_track
-      ac.baro_rate ?? ac.geom_rate, // 11: vertical_rate
-      null,                      // 12: sensors
-      ac.alt_geom,               // 13: geo_altitude
-      ac.squawk,                 // 14: squawk
-      ac.spi,                    // 15: spi
-      null,                      // 16: position_source
-      ac.category,               // 17: category
-    ]);
-
-    const result = { states };
-    proxyCache.set(cacheKey, { data: result, expires: Date.now() + PROXY_CACHE_TTL });
-    return c.json(result);
-  } catch (e) {
-    return c.json({ error: "Failed to reach aircraft API" }, 502);
-  }
+// ── Poller stats (diagnostic) ────────────────────────────────────────────
+app.get("/api/poller/stats", (c) => {
+  return c.json(getPositionsDbStats());
 });
 
 // Helper to derive country from ICAO24 hex code
@@ -115,12 +107,6 @@ function getCountryFromHex(hex: string): string {
     "3A": "Italy",
     "39": "Italy",
     "38": "Switzerland",
-    "4B": "Switzerland",
-    "45": "Denmark",
-    "46": "Sweden",
-    "47": "Norway",
-    "48": "Finland",
-    "48": "Poland",
     "7C": "Australia",
     "7D": "Australia",
     "7E": "Australia",
@@ -131,7 +117,6 @@ function getCountryFromHex(hex: string): string {
     "90": "India", "91": "India", "92": "India", "93": "India", "94": "India", "95": "India", "96": "India", "97": "India",
     "76": "Malaysia", "77": "Malaysia",
     "78": "China",
-    "A0": "South Africa",
   };
   return countryMap[prefix] || "Unknown";
 }

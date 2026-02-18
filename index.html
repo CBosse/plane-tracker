@@ -1575,6 +1575,7 @@
     const planeMarkers = new Map(); // icao24 -> L.marker
     const positionHistory = new Map(); // icao24 -> [{lat, lon, alt, timestamp}]
     const trailPolylines = new Map(); // icao24 -> L.polyline
+    const trailsFetched = new Set(); // icao24s whose server-side trail has been loaded
     let trailsVisible = false;
 
     function altitudeToColor(altMeters) {
@@ -1594,6 +1595,7 @@
       for (const icao24 of positionHistory.keys()) {
         if (!currentIcaos.has(icao24)) {
           positionHistory.delete(icao24);
+          trailsFetched.delete(icao24);
           if (trailPolylines.has(icao24)) {
             trailPolylines.get(icao24).remove();
             trailPolylines.delete(icao24);
@@ -1601,13 +1603,56 @@
         }
       }
 
-      // Append new positions
+      // For planes seen for the first time, seed their trail from the server
+      for (const plane of planes) {
+        if (plane.lat == null || plane.lon == null) continue;
+        if (!trailsFetched.has(plane.icao24)) {
+          trailsFetched.add(plane.icao24);
+          fetchServerTrail(plane.icao24);
+        }
+      }
+
+      // Append current positions
       for (const plane of planes) {
         if (plane.lat == null || plane.lon == null) continue;
         const history = positionHistory.get(plane.icao24) || [];
         history.push({ lat: plane.lat, lon: plane.lon, alt: plane.alt, timestamp: now });
-        if (history.length > 30) history.splice(0, history.length - 30);
+        if (history.length > 500) history.splice(0, history.length - 500);
         positionHistory.set(plane.icao24, history);
+      }
+    }
+
+    async function fetchServerTrail(icao24) {
+      try {
+        const res = await fetch(`/api/trails/${icao24}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.trail || data.trail.length < 2) return;
+
+        // Convert server points (ts = unix seconds) to positionHistory format (timestamp = ms)
+        const serverPoints = data.trail.map(p => ({
+          lat: p.lat,
+          lon: p.lon,
+          alt: p.alt,
+          timestamp: p.ts * 1000,
+        }));
+
+        // Prepend server trail; drop points that overlap with what we already have in memory
+        const existing = positionHistory.get(icao24) || [];
+        const existingMinTs = existing.length > 0 ? existing[0].timestamp : Infinity;
+        const newPoints = serverPoints.filter(p => p.timestamp < existingMinTs);
+        if (newPoints.length === 0) return;
+
+        const merged = [...newPoints, ...existing];
+        if (merged.length > 500) merged.splice(0, merged.length - 500);
+        positionHistory.set(icao24, merged);
+
+        // Redraw trails if they are currently visible
+        if (trailsVisible) {
+          updateTrails(allPlanes);
+        }
+      } catch {
+        // Network error or server not ready — silently skip
       }
     }
 
@@ -2175,6 +2220,7 @@
 
         // Clear trails on location change
         positionHistory.clear();
+        trailsFetched.clear();
         for (const [, poly] of trailPolylines) poly.remove();
         trailPolylines.clear();
 

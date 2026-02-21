@@ -642,7 +642,8 @@
       border: 5px solid transparent;
       border-top-color: var(--tooltip-bg);
     }
-    .tip:hover .tiptext {
+    .tip:hover .tiptext,
+    .tip.tip-open .tiptext {
       visibility: visible;
       opacity: 1;
     }
@@ -732,7 +733,8 @@
       border: 6px solid transparent;
       border-top-color: var(--tooltip-bg);
     }
-    .squawk-tip:hover .squawk-tooltip {
+    .squawk-tip:hover .squawk-tooltip,
+    .squawk-tip.tip-open .squawk-tooltip {
       visibility: visible;
       opacity: 1;
     }
@@ -2273,6 +2275,15 @@
       fetchPlanes();
     }
 
+    // ── Mobile-friendly tooltip toggle (tap to show, tap elsewhere to dismiss) ──
+    document.addEventListener('click', (e) => {
+      const tipEl = e.target.closest('.tip, .squawk-tip');
+      document.querySelectorAll('.tip.tip-open, .squawk-tip.tip-open').forEach(el => {
+        if (el !== tipEl) el.classList.remove('tip-open');
+      });
+      if (tipEl) tipEl.classList.toggle('tip-open');
+    });
+
     // ── Pause/resume when tab visibility changes ─────────────────────
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -2782,8 +2793,9 @@
 
       // Click to toggle expand/collapse
       card.addEventListener('click', (e) => {
-        // Don't toggle if clicking a link or tooltip
+        // Don't toggle if clicking a link or tooltip element
         if (e.target.closest('a')) return;
+        if (e.target.closest('.tip, .squawk-tip')) return;
         toggleCardExpand(plane.icao24);
       });
 
